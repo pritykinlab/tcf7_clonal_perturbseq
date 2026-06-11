@@ -1,0 +1,85 @@
+Figure S1. Additional analysis of in vitro and in vivo Tcf7 regulator screens.
+(a) Principal component analysis of DESeq2 variance-stabilized bulk RNA-seq profiles for the 27 RNA-seq samples underlying Figure 1c.
+(b) Heatmap showing DESeq2-normalized expression of the 27 individual RNA-seq samples from Figure 1c. Values are row z-scores computed across samples. Thy1.1 is the lentiviral transduction marker.
+(c) Pairwise Pearson correlations computed from log2-normalized gene expression for the samples shown in Figure 1c. Left, pre-transfer lenti naive and anti-CD3/CD28-activated samples were correlated with freshly isolated naive samples. Right, day-7 cells derived from lenti naive or lenti-activated P14 cells after LCMV infection were correlated with cells derived from cotransferred naive controls. Each point is one treatment-control sample-pair correlation. P values were calculated by treating pairwise sample correlations as observations and comparing the two displayed distributions within each panel using two-sided Mann-Whitney U tests.
+(d) Pairwise Pearson correlations between day-30 memory RNA-seq samples derived from cotransferred naive controls, lenti naive P14 cells, or lenti-activated P14 cells, split by flow-sorted central memory (CD44+CD62L+) and effector memory (CD44+CD62L-) P14 CD8 T cells. Each point is one control sample-pair correlation within the indicated input context. P values were calculated by treating pairwise sample correlations as observations and comparing lenti naive and lenti-activated distributions using two-sided Mann-Whitney U tests.
+
+
+Figure S2. Pathway enrichment analysis for CRISPR screen results.
+(a) Gene-level heatmap of manually curated in vitro screen hits linked to the pathway terms in (b) across six condition-specific genome-wide CRISPR screen comparisons. Values are PoolQ Average LFC across guides and are shown for screen-gene pairs with nominal gene-level P <= 0.05. Positive values indicate enrichment in the high-marker bin, and negative values indicate enrichment in the low-marker bin (Table S1.5). Significance labels: `***`, P < 0.001; `**`, P < 0.01; `*`, P <= 0.05.
+(b) Pathway enrichment heatmap for the terms linked to genes in (a). For each screen comparison, genes with nominal gene-level P <= 0.05 were split by the sign of PoolQ Average LFC: positive values indicate enrichment in the high-marker bin, and negative values indicate enrichment in the low-marker bin. Each gene set was tested for enrichment in selected GO Biological Process, GO Cellular Component, GO Molecular Function, Reactome, KEGG Mouse, and WikiPathways Mouse terms using one-sided Fisher’s exact tests. Values are log2(odds ratio) and are shown for pathway-direction pairs with P < 0.05.
+
+
+Figure S3. Additional Perturb-seq analysis.
+(a) UMAP plots showing library-size-normalized expression of key marker genes in the 10-gene Perturb-seq dataset.
+(b) Same as Figure 2c, but restricted to NT cells and excluding the TRM-like state.
+(c) Gene-level heatmaps showing representative genes underlying the GO term-derived signature programs in Figure 2e. Columns are the six cell states and rows are genes grouped by program. Heatmap values are the mean NT-referenced log-normalized z-scored expression. We manually selected 5 genes for each program based on manual curation and large differences across cell states.
+(d) Gene-level heatmaps showing representative genes underlying the progenitor and dysfunction programs used in Figure 2e. The same manual curation and plotting procedure described in (c) was applied to these signatures.
+(e) Gene-level heatmaps showing representative genes underlying the TRM- and TEX-related programs used in Figure 2e. The same manual curation and plotting procedure described in (c) was applied to these signatures.
+
+Figure S5. Additional clonal analysis of Perturb-seq data.
+(a) Same as Figure 3b, but showing clone-size and cell-state heterogeneity separately for each guide.
+(b) UMAP plot colored by clone size.
+
+
+Figure S6. Perturbation effect on clonal size.
+(a) Overlapping histograms of NT clone sizes for Isotype and anti-PD-1 conditions. The x-axis shows log10(clone size) and the y-axis shows density. Here, `n` denotes the number of NT clones.
+(b) Isotonic regression fits for NT clones split by Isotype and anti-PD-1, showing the relationship between log2(clone size) and the proportion of cells in each state. The black line denotes the combined Progenitor plus Progenitor Cycling fraction. Significance between anti-PD-1 and Isotype NT clone-level cell-type proportions was assessed with two-sided Wilcoxon rank-sum tests and Benjamini-Hochberg correction across the displayed states. Significance labels: `**`, adjusted P < 0.01; `*`, adjusted P < 0.05.
+(c) Overlapping histograms of NT clone-level cell-state proportions for Isotype and anti-PD-1 conditions.
+(d) Heatmap showing perturbation effects on clone size. Rows show all cells pooled, Isotype-treated cells, and anti-PD-1-treated cells. Using a Wilcoxon rank-sum test, log2(clone size) for perturbed clones was compared with NT controls. The effect size is shown when BH-adjusted P < 0.05.
+(e) Overlapping histograms of log10 clone size for NT and Trim28. This panel shows the Trim28 example underlying the pooled comparison in (d).
+(f) Forest plot of conditional odds ratios comparing the anti-PD-1-versus-Isotype clone-count ratio for each perturbation against the corresponding NT ratio in the 10-gene Perturb-seq dataset. Blue bars denote exact conditional 95% confidence intervals from 2x2 contingency tables with rows NT versus perturbation and columns Isotype versus anti-PD-1. X-axis labels report two-sided Fisher’s exact-test P values.
+
+
+Figure S7. Additional analysis of clonal distributions.
+(a) Bar plot across control guides showing the percentage of guide-assigned cells contributed by the largest recovered clone for that guide in the 10-gene Perturb-seq dataset.
+(b) Example control-versus-control comparison underlying the Figure 4c cell-based Fisher’s test for INTERGENIC-4 in the Progenitor state. Pie charts show the fraction of Progenitor versus all other cell states for INTERGENIC-4 cells and for the remaining NT guides. The 2x2 contingency table reports the corresponding cell counts used for the Fisher’s exact test. Benjamini-Hochberg-adjusted P values are calculated across all guides for the Progenitor state. The log2 odds ratio was computed with a +1 pseudocount and was used as the value plotted in Figure 4c.
+(c) Histograms showing the distribution across clones of the fraction of cells annotated as Progenitor within each clone. These histograms underlie the comparison made in Figure 4d for the Progenitor state. The top histogram compares NT clones against Bach2-1 clones, and the bottom histogram compares NT clones against Prdm1-1 clones; when multiple guides for a perturbation were significant in Figure 4d, the guide with the larger absolute Wilcoxon rank-sum z-statistic was shown. Significance was assessed with two-sided Wilcoxon rank-sum tests and Benjamini-Hochberg correction within the cell state across guides.
+(d) Same as (c), but showing clone-level Cycling fractions for NT versus Trim28-2 clones, corresponding to the depletion of Cycling cells detected in Figure 4d.
+
+
+Figure S8. Cell-based and clonal statistical testing.
+(a-d) Same as Figure 4a-d, but including all guides; this includes INTERGENIC-3, the intergenic control gRNA excluded from Figure 4a-d and highlighted in red.
+
+
+Figure S9. Clonal modeling of cell differentiation.
+(a) Same summary statistics as Figure 4g, but shown for the best-loss parameter set for each perturbation. Left, ECDF of log2(clone size) for the perturbation’s real data and best simulated data. Right, progenitor cell type proportion versus log2(clone size) for the perturbation’s real and best simulated clones, with curves fit by isotonic regression.
+(b) Bar plot showing the loss for each modeled perturbation (n is the number of clones).
+
+
+Figure S10. Clonal size distribution in the Trim28/Setdb1 Perturb-seq experiment.
+(a) Same as Figure 5b, but using recovered cell counts rather than recovered clone counts.
+(b) Overlapping histograms of log10 clone size for NT versus Trim28 (left) and NT versus Setdb1 (right) after excluding lymph-node cells. The y-axis shows density. Two-sided Wilcoxon rank-sum P values and z-statistics are shown for each pooled comparison.
+
+
+Figure S11. Additional analysis of the Trim28/Setdb1 Perturb-seq experiment.
+(a) Dot plot visualizing expression of key marker genes across NT cell states in the Trim28/Setdb1 Perturb-seq dataset, excluding the TRM-like state. Dot size indicates the fraction of cells expressing each marker, color indicates mean expression, and the bar plot at right shows the number of cells per state.
+(b) Stacked bar chart showing the relative abundance of perturbation categories within each cell state, as in Figure 5g, but including cells with no detected guide as a separate `No Guide` category shown in dark gray.
+(c) Stacked bar chart showing guide-level cell-state proportions in the Trim28/Setdb1 Perturb-seq dataset. `n` denotes the number of cells.
+(d) Clone-level cell-state composition for Trim28 clones from the Trim28/Setdb1 Perturb-seq dataset, analogous to Figure 3b. Clones are ordered by log2(clone size), then by cell-type composition, along the x-axis. The top panel shows log2(clone size) across clones; red dots mark clones selected by uniform sampling weighted by log2(clone size), and labels report their clone sizes. The bottom panel shows stacked cell-type proportions for each clone.
+(e) Clone-size-normalized cell-state enrichment analysis for Trim28 clones from the Trim28/Setdb1 Perturb-seq dataset after excluding lymph-node cells, analogous to Figure 3f.
+(f) Violin plot showing guide-level TRM-like signature scores in the Trim28/Setdb1 Perturb-seq dataset using the TRM-like signature genes (Table S5.2). Guides with more than 10 cells are shown. Significance was assessed with one-sided Mann-Whitney U tests comparing each guide against pooled NT cells; x-axis labels report the number of cells (`n`). Significance labels: `***`, P < 0.001; `**`, P < 0.01; `*`, P < 0.05.
+(g) Scatter plots comparing Trim28-versus-NT log2 fold changes (x-axis) and Setdb1-versus-NT log2 fold changes (y-axis) within each experiment. Left, the 10-gene Perturb-seq experiment. Right, the Trim28/Setdb1 Perturb-seq experiment. Points denote shared genes; blue points were significant in both perturbation comparisons within the displayed experiment, and gray points were not.
+
+
+Figure S12. Clonal modeling for the Trim28/Setdb1 Perturb-seq data.
+(a) Same summary statistics as Figure 4g, but shown for the best-loss parameter set for NT, Trim28, and Setdb1 in the Trim28/Setdb1 Perturb-seq dataset. `n` is the number of clones.
+(b) Same as Figure 4f, but showing the 100 lowest-loss parameter sets for NT and Trim28 in the Trim28/Setdb1 Perturb-seq dataset.
+(c) Same as Figure 4h, but for the NT and Trim28 lowest-loss parameter sets in the Trim28/Setdb1 Perturb-seq dataset.
+
+
+Figure S13. Additional analysis of the multi-omic data.
+(a) UMAP plots showing library-size-normalized expression of key marker genes in the multiome RNA dataset.
+(b) Same as Figure 6b, but restricted to control cells and excluding the TRM-like state.
+(c) Same analysis as Figure 5m, but applied to the multiome Trim28 cells. Left, mean Euclidean distances computed in RNA PCA space (first 30 PCs). Right, mean Euclidean distances computed in ATAC PCA space (first 40 PCs).
+(d) Same analysis as Figure 4c, but comparing Trim28 versus Control cells in the multiome RNA dataset. Values are log2 odds ratios and are shown when BH-adjusted two-sided P < 0.05 across the cell states.
+
+
+Figure S14. Genomic tracks for Itga1 and Setdb1.
+(a) Same layout as Figure 6e, but showing the Itga1 locus. Control and TRM-like cells are shown, and the shaded region marks the Itga1-assigned ATAC peak that was significant in the Figure 6d comparison of Trim28 TRM-like cells versus non-TRM-like Control cells. The right panel shows the corresponding normalized scRNA-seq expression of Itga1.
+(b) Same layout as Figure 6e, but showing the Setdb1 locus. Control and TRM-like cells are shown, and the shaded region marks the Setdb1-assigned ATAC peak that was significant in the Figure 6d comparison of Trim28 TRM-like cells versus non-TRM-like Control cells. The right panel shows the corresponding normalized scRNA-seq expression of Setdb1.
+
+
+Figure S15. Concordance of the multiome preprocessing pipelines.
+(a) Histogram showing the distribution of Pearson correlations across cells for 100 randomly sampled retained genes in the scRNA-seq component of the multiome dataset. For each gene, counts reconstructed from the raw multiome scRNA-seq BAM files were compared with counts derived from Cell Ranger.
+(b) Histogram showing the distribution of Pearson correlations across cells for 100 randomly sampled retained peaks in the scATAC-seq component of the multiome dataset. For each peak, insertion counts reconstructed from the raw multiome scATAC-seq BAM files were compared with peak counts derived from Cell Ranger.

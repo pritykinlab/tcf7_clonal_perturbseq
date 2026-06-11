@@ -1,0 +1,14 @@
+{
+    "__default__": {
+        "time": "12:00:00",
+        "ntasks": 1,
+        "cpus-per-task": 1,
+        "mem": "32gb"
+    },
+    "create_clean_adata": {
+        "mem":"64gb"
+    },
+    "aggregate_create_final_adata": {
+        "mem": "32gb"
+    },
+}

@@ -1,0 +1,3421 @@
+# Snakefile for Manuscript Figures
+# This workflow generates all manuscript figures from the PerturbSeq analysis
+
+import glob
+import os
+import subprocess
+
+PLOTS_DIR = "plots"
+SCRIPTS_DIR = "scripts"
+DERIVED_DIR = "derived"
+
+PYTHON_ENV=os.environ.get("PYTHON", "python")
+RSCRIPT=os.environ.get("RSCRIPT", "Rscript")
+MY_UTILS_DIR=os.environ.get("MY_UTILS_DIR", "../my_utils")
+
+try:
+    NPROC=max(1, int(subprocess.check_output(["nproc"], universal_newlines=True).strip()))
+except (OSError, subprocess.SubprocessError, ValueError):
+    NPROC=max(1, os.cpu_count() or 1)
+
+TCELL_COMBO_RNASEQ_DIR="../gcloud/Tcf7_paper_data/RNAseq/tcellcombo"
+TCELL_COMBO_SALMON_LCMV_DIR=f"{TCELL_COMBO_RNASEQ_DIR}/salmon_LCMV"
+TCELL_COMBO_METADATA=f"{TCELL_COMBO_RNASEQ_DIR}/meta_2_29_24.csv"
+MOUSE_GENCODE_GTF="../gcloud/Tcf7_paper_data/RNAseq/salmon/mouse/gencode.vM25.annotation.gtf"
+RNASEQ_DESEQ2_DIR=f"{DERIVED_DIR}/rnaseq_deseq2"
+RNASEQ_DESEQ2_NORMALIZED_COUNTS=f"{RNASEQ_DESEQ2_DIR}/deseq2_normalized_counts.tsv"
+RNASEQ_DESEQ2_VST_EXPRESSION=f"{RNASEQ_DESEQ2_DIR}/deseq2_vst_expression.tsv"
+RNASEQ_DESEQ2_SUP_FIGURE1_1A_PCA=f"{RNASEQ_DESEQ2_DIR}/deseq2_plotpca_sup_figure1_1a_samples.tsv"
+RNASEQ_DESEQ2_SUP_FIGURE1_1A_MEMORY_PCA=f"{RNASEQ_DESEQ2_DIR}/deseq2_plotpca_sup_figure1_1a_memory_samples.tsv"
+RNASEQ_SALMON_LCMV_QUANTS=sorted(glob.glob(f"{TCELL_COMBO_SALMON_LCMV_DIR}/*_quant/quant.sf"))
+FIGURE7_CLEAN_DIR="../Figure7_data_context_2026-05-19/02_cleaned_tables_and_outputs/figure7_redesign/cleaned_tables"
+FIGURE7_PARSED_DIR="../Figure7_data_context_2026-05-19/01_collected_source_data/figure7_data/parsed"
+SUPPLEMENTARY_TABLE_IDS=[
+    "1_1", "1_2", "1_3", "1_4", "1_5", "1_6", "1_7",
+    "2_1", "2_2", "2_3",
+    "4_1", "4_2",
+    "5_1", "5_2",
+    "6_1", "6_2", "6_3",
+    "7_1", "7_2", "7_3", "7_4", "7_5",
+    "M1",
+]
+SUPPLEMENTARY_TABLE_TSVS=[
+    f"supplementary_tables/{table_id}.tsv"
+    for table_id in SUPPLEMENTARY_TABLE_IDS
+]
+SUPPLEMENTARY_TABLE_CAPTIONS="supplementary_tables/caption.txt"
+SUPPLEMENTARY_TABLE_EXCEL="supplementary_tables/supplementary_tables.xlsx"
+SRA_METADATA_SCRIPT="../data_submissions/SRA/metadata/prepare_sra_metadata_template.py"
+SRA_METADATA_TEMPLATE="../data_submissions/SRA/metadata/SRA_metadata_template.xlsx"
+SRA_METADATA_WORKBOOK="../data_submissions/SRA/SRA_metadata.xlsx"
+SRA_METADATA_SUBMISSION_TSV="../data_submissions/SRA/metadata/sra_metadata_submission.tsv"
+SRA_POOLQ_METADATA_TSV="../data_submissions/SRA/metadata/figure1_poolq_sra_metadata.tsv"
+BIOSAMPLE_METADATA_SCRIPT="../data_submissions/SRA/metadata/prepare_biosample_submission_template.py"
+BIOSAMPLE_METADATA_WORKBOOK="../data_submissions/SRA/Model.organism.animal.1.0.xlsx"
+BIOSAMPLE_METADATA_SUBMISSION_TSV="../data_submissions/SRA/metadata/biosample_model_organism_animal_submission.tsv"
+BIOSAMPLE_POOLQ_ATTRIBUTES_TSV="../data_submissions/SRA/metadata/figure1_poolq_biosample_attributes.tsv"
+BIOSAMPLE_METADATA_TODO_TSV="../data_submissions/SRA/metadata/biosample_model_organism_animal_todo.tsv"
+BIOSAMPLE_MANUAL_OVERRIDES_TSV="../data_submissions/SRA/metadata/biosample_manual_overrides.tsv"
+GEO_SUBMISSION_PACKAGE_SCRIPT="../data_submissions/GEO/metadata/prepare_geo_submission_package.py"
+GEO_SUBMISSION_PACKAGE_DIR="../data_submissions/GEO/submission_package"
+GEO_SUBMISSION_PACKAGE_TEMPLATES=[
+    f"{GEO_SUBMISSION_PACKAGE_DIR}/01_bulk_rnaseq/geo_metadata_template.tsv",
+    f"{GEO_SUBMISSION_PACKAGE_DIR}/02_pooled_sgrna_amplicon/geo_metadata_template.tsv",
+    f"{GEO_SUBMISSION_PACKAGE_DIR}/03_10gene_perturbseq/geo_metadata_template.tsv",
+    f"{GEO_SUBMISSION_PACKAGE_DIR}/04_trim28_setdb1_perturbseq/geo_metadata_template.tsv",
+    f"{GEO_SUBMISSION_PACKAGE_DIR}/05_trim28_multiome/geo_metadata_template.tsv",
+]
+GEO_SUBMISSION_PACKAGE_POOLED_SAMPLE_METADATA=(
+    f"{GEO_SUBMISSION_PACKAGE_DIR}/02_pooled_sgrna_amplicon/sample_metadata.tsv"
+)
+GEO_FTP_UPLOAD_TREE_SCRIPT="../data_submissions/GEO/metadata/prepare_geo_ftp_upload_tree.py"
+GEO_FTP_UPLOAD_TREE_DIR="../data_submissions/GEO/ftp_upload"
+GEO_FTP_UPLOAD_MANIFEST="../data_submissions/GEO/ftp_upload_manifest.tsv"
+GEO_FINAL_LAYOUT_SCRIPT="../data_submissions/GEO/metadata/prepare_geo_final_layout.py"
+GEO_FINAL_DIR="../data_submissions/GEO_final"
+GEO_FINAL_DATASET_DIRS=[
+    f"{GEO_FINAL_DIR}/01_bulk_rnaseq",
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens",
+    f"{GEO_FINAL_DIR}/03_10gene_perturbseq",
+    f"{GEO_FINAL_DIR}/04_trim28_setdb1_perturbseq",
+    f"{GEO_FINAL_DIR}/05_trim28_multiome",
+]
+GEO_FINAL_RAW_DATA_DIRS=[
+    f"{dataset_dir}/raw_data"
+    for dataset_dir in GEO_FINAL_DATASET_DIRS
+]
+GEO_FINAL_EXPERIMENTAL_DESIGN_FILES=[
+    f"{dataset_dir}/indv_columns_for_metadata/000_experimental_design.txt"
+    for dataset_dir in GEO_FINAL_DATASET_DIRS
+]
+GEO_FINAL_BOTTOM_TABLES=[
+    f"{dataset_dir}/indv_columns_for_metadata/100_bottom.tsv"
+    for dataset_dir in GEO_FINAL_DATASET_DIRS
+]
+GEO_FINAL_RAW_FILE_HELPERS=[
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/21_raw_file.tsv",
+    f"{GEO_FINAL_DIR}/03_10gene_perturbseq/indv_columns_for_metadata/19_raw_file.tsv",
+    f"{GEO_FINAL_DIR}/04_trim28_setdb1_perturbseq/indv_columns_for_metadata/19_raw_file.tsv",
+    f"{GEO_FINAL_DIR}/05_trim28_multiome/indv_columns_for_metadata/19_raw_file.tsv",
+]
+GEO_FINAL_RAW_MD5_HELPERS=[
+    f"{GEO_FINAL_DIR}/01_bulk_rnaseq/indv_columns_for_metadata/999_raw_md5.txt",
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/999_raw_md5.txt",
+    f"{GEO_FINAL_DIR}/03_10gene_perturbseq/indv_columns_for_metadata/999_raw_md5.txt",
+    f"{GEO_FINAL_DIR}/04_trim28_setdb1_perturbseq/indv_columns_for_metadata/999_raw_md5.txt",
+    f"{GEO_FINAL_DIR}/05_trim28_multiome/indv_columns_for_metadata/999_raw_md5.txt",
+]
+GEO_FINAL_PROCESSED_MD5_HELPERS=[
+    f"{dataset_dir}/indv_columns_for_metadata/999_processed_md5.txt"
+    for dataset_dir in GEO_FINAL_DATASET_DIRS
+]
+GEO_FINAL_POOLED_PROCESSED_FILE_LIST=(
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/001_processed_files.txt"
+)
+GEO_FINAL_POOLED_SAMPLE_NAME_HELPERS=[
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/00_library_name.txt",
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/12_batch.txt",
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/17_screen.txt",
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/19_source_sample_name.txt",
+]
+GEO_FINAL_POOLED_DESCRIPTION_HELPER=(
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/16_description.txt"
+)
+GEO_FINAL_POOLED_PROCESSED_DATA_FILE_HELPER=(
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/20_processed_data_file.txt"
+)
+GEO_FINAL_LIBRARY_TYPE_HELPERS=[
+    f"{GEO_FINAL_DIR}/03_10gene_perturbseq/indv_columns_for_metadata/11_library_type.txt",
+    f"{GEO_FINAL_DIR}/04_trim28_setdb1_perturbseq/indv_columns_for_metadata/11_library_type.txt",
+    f"{GEO_FINAL_DIR}/05_trim28_multiome/indv_columns_for_metadata/11_library_type.txt",
+]
+GEO_FINAL_PROTOCOL_HELPERS=[
+    f"{GEO_FINAL_DIR}/01_bulk_rnaseq/indv_columns_for_metadata/13_growth_protocol.txt",
+    f"{GEO_FINAL_DIR}/01_bulk_rnaseq/indv_columns_for_metadata/14_treatment_protocol.txt",
+    f"{GEO_FINAL_DIR}/01_bulk_rnaseq/indv_columns_for_metadata/16_extract_protocol.txt",
+    f"{GEO_FINAL_DIR}/01_bulk_rnaseq/indv_columns_for_metadata/17_library_construction_protocol.txt",
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/22_growth_protocol.txt",
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/23_treatment_protocol.txt",
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/24_extract_protocol.txt",
+    f"{GEO_FINAL_DIR}/02_pooled_bulk_CRISPR_screens/indv_columns_for_metadata/25_library_construction_protocol.txt",
+    f"{GEO_FINAL_DIR}/03_10gene_perturbseq/indv_columns_for_metadata/20_growth_protocol.txt",
+    f"{GEO_FINAL_DIR}/03_10gene_perturbseq/indv_columns_for_metadata/21_treatment_protocol.txt",
+    f"{GEO_FINAL_DIR}/03_10gene_perturbseq/indv_columns_for_metadata/22_extract_protocol.txt",
+    f"{GEO_FINAL_DIR}/03_10gene_perturbseq/indv_columns_for_metadata/23_library_construction_protocol.txt",
+    f"{GEO_FINAL_DIR}/03_10gene_perturbseq/indv_columns_for_metadata/24_data_processing_step_1.txt",
+    f"{GEO_FINAL_DIR}/04_trim28_setdb1_perturbseq/indv_columns_for_metadata/20_growth_protocol.txt",
+    f"{GEO_FINAL_DIR}/04_trim28_setdb1_perturbseq/indv_columns_for_metadata/21_treatment_protocol.txt",
+    f"{GEO_FINAL_DIR}/04_trim28_setdb1_perturbseq/indv_columns_for_metadata/22_extract_protocol.txt",
+    f"{GEO_FINAL_DIR}/04_trim28_setdb1_perturbseq/indv_columns_for_metadata/23_library_construction_protocol.txt",
+    f"{GEO_FINAL_DIR}/04_trim28_setdb1_perturbseq/indv_columns_for_metadata/24_data_processing_step_1.txt",
+    f"{GEO_FINAL_DIR}/05_trim28_multiome/indv_columns_for_metadata/20_growth_protocol.txt",
+    f"{GEO_FINAL_DIR}/05_trim28_multiome/indv_columns_for_metadata/21_treatment_protocol.txt",
+    f"{GEO_FINAL_DIR}/05_trim28_multiome/indv_columns_for_metadata/22_extract_protocol.txt",
+    f"{GEO_FINAL_DIR}/05_trim28_multiome/indv_columns_for_metadata/23_library_construction_protocol.txt",
+]
+GEO_RNASEQ_DIR="../data_submissions/GEO/Figure1c_rnaseq"
+GEO_POOLQ_DIR="../data_submissions/GEO/Figure1_poolq"
+GEO_PROCESSED_H5AD_DIR="../data_submissions/GEO/processed_h5ad"
+GEO_SC_PROCESSED_MANIFEST="../data_submissions/GEO/metadata/tcf7_sc_geo_processed_data_manifest_draft.tsv"
+GEO_MD5_MANIFEST="../data_submissions/GEO/MANIFEST.md5"
+GEO_POOLQ_PILOT_SOURCE_COUNTS="../raw_data/CRISPR_sort_screens/7_8_2020_CP1473_invitro_Tcf7screens/poolq_output/counts.txt"
+GEO_TEN_GENE_FEATURE_REFERENCE="../raw_data/new_data/exp49_CP8/cellranger/lane1/feature_reference.csv"
+GEO_TEN_GENE_ANTIBODY_INDEX="../raw_data/new_data/exp49_CP8/antibody_index.csv"
+GEO_TEN_GENE_SGRNA_INDEX="../raw_data/new_data/exp49_CP8/sgrna_index.csv"
+GEO_TEN_GENE_GUIDE_INFO="../raw_data/new_data/exp49_CP8/guide_seq_info.csv"
+GEO_TRIM28_SETDB1_FEATURE_REFERENCE="../raw_data/new_data/trim28_setdb1_data/analysis/Lane1/feature_reference.csv"
+GEO_TRIM28_SETDB1_GUIDE_INFO="../raw_data/new_data/trim28_setdb1_data/reference_genome/guide_seq.csv"
+GEO_RAW_FASTQS=sorted(glob.glob("../data_submissions/SRA/Figure1_fastq/**/*.fastq.gz", recursive=True)) + \
+    sorted(glob.glob("../data_submissions/SRA/Figure1c_rnaseq_fastq/*.fastq.gz")) + \
+    sorted(glob.glob("../data_submissions/SRA/gene10_fastq/*.fastq.gz")) + \
+    sorted(glob.glob("../data_submissions/SRA/trim28_setdb1_fastq/*.fastq.gz")) + \
+    sorted(glob.glob("../data_submissions/SRA/trim28_multiome_fastq/*.fastq.gz"))
+
+# =============================================================================
+# DATA SUBMISSION METADATA
+# =============================================================================
+
+rule SRA_metadata_submission:
+    """Populate the consolidated SRA metadata template from staged FASTQs and metadata tables."""
+    input:
+        script=SRA_METADATA_SCRIPT,
+        template=SRA_METADATA_TEMPLATE,
+        rnaseq="../data_submissions/SRA/metadata/figure1c_rnaseq_sra_metadata.tsv",
+        single_cell="../data_submissions/SRA/metadata/tcf7_sc_sra_metadata_draft.tsv",
+        pooled_fastq_dir="../data_submissions/SRA/Figure1_fastq"
+    output:
+        workbook=SRA_METADATA_WORKBOOK,
+        submission_tsv=SRA_METADATA_SUBMISSION_TSV,
+        poolq_tsv=SRA_POOLQ_METADATA_TSV
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+rule BioSample_metadata_submission:
+    """Populate the NCBI BioSample model-organism animal template from staged metadata."""
+    input:
+        script=BIOSAMPLE_METADATA_SCRIPT,
+        rnaseq="../data_submissions/SRA/metadata/figure1c_rnaseq_biosample_attributes.tsv",
+        single_cell="../data_submissions/SRA/metadata/tcf7_sc_biosample_attributes_draft.tsv",
+        pooled_fastq_dir="../data_submissions/SRA/Figure1_fastq",
+        manual_overrides=BIOSAMPLE_MANUAL_OVERRIDES_TSV
+    output:
+        workbook=BIOSAMPLE_METADATA_WORKBOOK,
+        submission_tsv=BIOSAMPLE_METADATA_SUBMISSION_TSV,
+        poolq_tsv=BIOSAMPLE_POOLQ_ATTRIBUTES_TSV,
+        todo_tsv=BIOSAMPLE_METADATA_TODO_TSV
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+rule GEO_submission_package:
+    """Build the paper-level GEO SuperSeries/SubSeries upload package and validation manifests."""
+    input:
+        script=GEO_SUBMISSION_PACKAGE_SCRIPT,
+        md5_manifest=GEO_MD5_MANIFEST,
+        rnaseq_metadata=f"{GEO_RNASEQ_DIR}/figure1_rnaseq_submission_sample_metadata.tsv",
+        rnaseq_sra_metadata="../data_submissions/SRA/metadata/figure1c_rnaseq_sra_metadata.tsv",
+        rnaseq_panel_counts=f"{GEO_RNASEQ_DIR}/figure1c_panel27_normalized_counts.tsv",
+        rnaseq_memory_counts=f"{GEO_RNASEQ_DIR}/figure_s1d_memory59_normalized_counts.tsv",
+        biosample_workbook=BIOSAMPLE_METADATA_WORKBOOK,
+        poolq_metadata=SRA_POOLQ_METADATA_TSV,
+        poolq_pilot_source_counts=GEO_POOLQ_PILOT_SOURCE_COUNTS,
+        poolq_files=[
+            f"{GEO_POOLQ_DIR}/in_vitro_genome_wide.txt",
+            f"{GEO_POOLQ_DIR}/in_vitro_tcf7_antibody.txt",
+            f"{GEO_POOLQ_DIR}/in_vitro_tcf7_gfp.txt",
+            f"{GEO_POOLQ_DIR}/in_vivo_1.txt",
+            f"{GEO_POOLQ_DIR}/in_vivo_tcf7_2.txt",
+        ],
+        sc_sra_metadata="../data_submissions/SRA/metadata/tcf7_sc_sra_metadata_draft.tsv",
+        sc_biosample_metadata="../data_submissions/SRA/metadata/tcf7_sc_biosample_attributes_draft.tsv",
+        sc_processed_manifest=GEO_SC_PROCESSED_MANIFEST,
+        gene10_h5ad=f"{GEO_PROCESSED_H5AD_DIR}/gene10_final.h5ad",
+        trim28_setdb1_h5ad=f"{GEO_PROCESSED_H5AD_DIR}/trim28_setdb1_final.h5ad",
+        multiome_rna_h5ad=f"{GEO_PROCESSED_H5AD_DIR}/multiome_rna_final.h5ad",
+        multiome_atac_h5ad=f"{GEO_PROCESSED_H5AD_DIR}/multiome_atac_final.h5ad",
+        ten_gene_feature_reference=GEO_TEN_GENE_FEATURE_REFERENCE,
+        ten_gene_antibody_index=GEO_TEN_GENE_ANTIBODY_INDEX,
+        ten_gene_sgrna_index=GEO_TEN_GENE_SGRNA_INDEX,
+        ten_gene_guide_info=GEO_TEN_GENE_GUIDE_INFO,
+        trim28_setdb1_feature_reference=GEO_TRIM28_SETDB1_FEATURE_REFERENCE,
+        trim28_setdb1_guide_info=GEO_TRIM28_SETDB1_GUIDE_INFO,
+        methods_guide_table="supplementary_tables/M1.tsv",
+        sra_md5_manifests=sorted(glob.glob("../data_submissions/SRA/MANIFEST*.md5"))
+    output:
+        readme=f"{GEO_SUBMISSION_PACKAGE_DIR}/README.md",
+        validation=f"{GEO_SUBMISSION_PACKAGE_DIR}/validation_results.tsv",
+        upload_manifest=f"{GEO_SUBMISSION_PACKAGE_DIR}/geo_upload_manifest.tsv",
+        templates=GEO_SUBMISSION_PACKAGE_TEMPLATES,
+        pooled_sample_metadata=GEO_SUBMISSION_PACKAGE_POOLED_SAMPLE_METADATA
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+rule GEO_ftp_upload_tree:
+    """Build the FTP-only GEO upload tree with raw FASTQs and processed/support data files."""
+    input:
+        script=GEO_FTP_UPLOAD_TREE_SCRIPT,
+        geo_upload_manifest=f"{GEO_SUBMISSION_PACKAGE_DIR}/geo_upload_manifest.tsv",
+        rnaseq_sra_metadata="../data_submissions/SRA/metadata/figure1c_rnaseq_sra_metadata.tsv",
+        rnaseq_sample_metadata=f"{GEO_RNASEQ_DIR}/figure1_rnaseq_submission_sample_metadata.tsv",
+        sra_md5_manifests=sorted(glob.glob("../data_submissions/SRA/MANIFEST*.md5")),
+        raw_fastqs=GEO_RAW_FASTQS
+    output:
+        manifest=GEO_FTP_UPLOAD_MANIFEST
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+rule GEO_final_layout:
+    """Assemble final GEO folders with metadata helpers and raw upload files."""
+    input:
+        script=GEO_FINAL_LAYOUT_SCRIPT,
+        ftp_manifest=GEO_FTP_UPLOAD_MANIFEST,
+        geo_templates=GEO_SUBMISSION_PACKAGE_TEMPLATES,
+        pooled_sample_metadata=GEO_SUBMISSION_PACKAGE_POOLED_SAMPLE_METADATA
+    output:
+        raw_data_dirs=GEO_FINAL_RAW_DATA_DIRS,
+        experimental_design=GEO_FINAL_EXPERIMENTAL_DESIGN_FILES,
+        bottom_tables=GEO_FINAL_BOTTOM_TABLES,
+        raw_file_helpers=GEO_FINAL_RAW_FILE_HELPERS,
+        raw_md5_helpers=GEO_FINAL_RAW_MD5_HELPERS,
+        processed_md5_helpers=GEO_FINAL_PROCESSED_MD5_HELPERS,
+        pooled_processed_files=GEO_FINAL_POOLED_PROCESSED_FILE_LIST,
+        pooled_sample_name_helpers=GEO_FINAL_POOLED_SAMPLE_NAME_HELPERS,
+        pooled_description=GEO_FINAL_POOLED_DESCRIPTION_HELPER,
+        pooled_processed_data_file=GEO_FINAL_POOLED_PROCESSED_DATA_FILE_HELPER,
+        library_type_helpers=GEO_FINAL_LIBRARY_TYPE_HELPERS,
+        protocols=GEO_FINAL_PROTOCOL_HELPERS
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+# =============================================================================
+# BULK RNA-SEQ NORMALIZATION FOR FIGURE 1c AND FIGURE S1a-b
+# =============================================================================
+
+rule Figure1_rnaseq_prepare_tx2gene:
+    """Prepare sample and transcript-to-gene tables for the bulk RNA-seq DESeq2 normalization"""
+    input:
+        script=f"{SCRIPTS_DIR}/bulk_rnaseq_prepare_tx2gene.py",
+        metadata=TCELL_COMBO_METADATA,
+        gtf=MOUSE_GENCODE_GTF,
+        quant_files=RNASEQ_SALMON_LCMV_QUANTS
+    output:
+        sample_table=f"{RNASEQ_DESEQ2_DIR}/sample_table.tsv",
+        tx2gene=f"{RNASEQ_DESEQ2_DIR}/tx2gene.tsv",
+        gene_metadata=f"{RNASEQ_DESEQ2_DIR}/gene_metadata.tsv"
+    params:
+        quant_dir=TCELL_COMBO_SALMON_LCMV_DIR
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --gtf {input.gtf} \
+            --quant-dir {params.quant_dir} \
+            --metadata {input.metadata} \
+            --tx2gene-output {output.tx2gene} \
+            --gene-metadata-output {output.gene_metadata} \
+            --sample-table-output {output.sample_table}
+        """
+
+rule Figure1_rnaseq_deseq2_normalized_counts:
+    """Generate gene-level DESeq2-normalized bulk RNA-seq expression from Salmon transcript counts"""
+    input:
+        script=f"{SCRIPTS_DIR}/bulk_rnaseq_deseq2_normalize.R",
+        sample_table=rules.Figure1_rnaseq_prepare_tx2gene.output.sample_table,
+        tx2gene=rules.Figure1_rnaseq_prepare_tx2gene.output.tx2gene,
+        gene_metadata=rules.Figure1_rnaseq_prepare_tx2gene.output.gene_metadata,
+        quant_files=RNASEQ_SALMON_LCMV_QUANTS
+    output:
+        normalized_counts=RNASEQ_DESEQ2_NORMALIZED_COUNTS,
+        vst_expression=RNASEQ_DESEQ2_VST_EXPRESSION,
+        size_factors=f"{RNASEQ_DESEQ2_DIR}/deseq2_size_factors.tsv",
+        session_info=f"{RNASEQ_DESEQ2_DIR}/deseq2_session_info.txt"
+    shell:
+        """
+        if ! command -v {RSCRIPT} >/dev/null 2>&1; then
+            echo "ERROR: Rscript was not found. Set RSCRIPT to an Rscript executable with DESeq2 installed." >&2
+            exit 127
+        fi
+        {RSCRIPT} {input.script} \
+            --sample-table {input.sample_table} \
+            --tx2gene {input.tx2gene} \
+            --gene-metadata {input.gene_metadata} \
+            --normalized-counts-output {output.normalized_counts} \
+            --vst-expression-output {output.vst_expression} \
+            --size-factors-output {output.size_factors} \
+            --session-info-output {output.session_info}
+        """
+
+rule Sup_Figure_1_1a_rnaseq_pca_coordinates:
+    """Generate PCA coordinates for Figure 1c RNA-seq samples and separate memory-only PCA coordinates"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_figure1_1a_rnaseq_pca_coordinates.py",
+        vst_expression=RNASEQ_DESEQ2_VST_EXPRESSION,
+        metadata=TCELL_COMBO_METADATA
+    output:
+        coordinates=RNASEQ_DESEQ2_SUP_FIGURE1_1A_PCA,
+        memory_coordinates=RNASEQ_DESEQ2_SUP_FIGURE1_1A_MEMORY_PCA
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --vst-expression {input.vst_expression} \
+            --metadata {input.metadata} \
+            --output {output.coordinates} \
+            --memory-output {output.memory_coordinates}
+        """
+
+# =============================================================================
+# FIGURE S1: Figure 1 RNA-seq Supporting Analyses
+# =============================================================================
+
+rule Sup_Figure_1_1ab_rnaseq_sample_panels:
+    """PCA, heatmap, and pairwise-correlation panels for Figure S1 RNA-seq samples"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_figure1_1_rnaseq_sample_panels.py",
+        heatmap_script=f"{SCRIPTS_DIR}/figure1c_rnaseq_heatmap.py",
+        normalized_counts=RNASEQ_DESEQ2_NORMALIZED_COUNTS,
+        pca_coordinates=rules.Sup_Figure_1_1a_rnaseq_pca_coordinates.output.coordinates,
+        memory_pca_coordinates=rules.Sup_Figure_1_1a_rnaseq_pca_coordinates.output.memory_coordinates,
+        metadata=TCELL_COMBO_METADATA
+    output:
+        pca_png=f"{PLOTS_DIR}/Sup_Figure_1/a.png",
+        pca_svg=f"{PLOTS_DIR}/Sup_Figure_1/a.svg",
+        pca_coordinates=f"{PLOTS_DIR}/Sup_Figure_1/a_pca_coordinates.tsv",
+        experimental_pca_png=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental.png",
+        experimental_pca_svg=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental.svg",
+        experimental_pca_coordinates=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_pca_coordinates.tsv",
+        experimental_correlation_left_png=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_left.png",
+        experimental_correlation_left_svg=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_left.svg",
+        experimental_correlation_middle_png=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_middle.png",
+        experimental_correlation_middle_svg=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_middle.svg",
+        experimental_correlation_right_png=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_right.png",
+        experimental_correlation_right_svg=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_right.svg",
+        experimental_correlation_sample_metadata=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_sample_metadata.tsv",
+        experimental_correlation_order=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_cluster_order.tsv",
+        experimental_correlation_all=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_correlation_all.tsv",
+        experimental_correlation_cm=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_correlation_cm.tsv",
+        experimental_correlation_em=f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_correlation_em.tsv",
+        control_correlation_boxplot_png=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3.png",
+        control_correlation_boxplot_svg=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3.svg",
+        control_correlation_pairwise=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_pairwise_correlations.tsv",
+        control_correlation_summary=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_summary.tsv",
+        control_correlation_cm_boxplot_png=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_cm.png",
+        control_correlation_cm_boxplot_svg=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_cm.svg",
+        control_correlation_cm_pairwise=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_cm_pairwise_correlations.tsv",
+        control_correlation_cm_summary=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_cm_summary.tsv",
+        control_correlation_em_boxplot_png=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_em.png",
+        control_correlation_em_boxplot_svg=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_em.svg",
+        control_correlation_em_pairwise=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_em_pairwise_correlations.tsv",
+        control_correlation_em_summary=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_em_summary.tsv",
+        matched_source_correlation_boxplot_png=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4.png",
+        matched_source_correlation_boxplot_svg=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4.svg",
+        matched_source_correlation_pairwise=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_pairwise_correlations.tsv",
+        matched_source_correlation_summary=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_summary.tsv",
+        matched_source_correlation_cm_boxplot_png=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_cm.png",
+        matched_source_correlation_cm_boxplot_svg=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_cm.svg",
+        matched_source_correlation_cm_pairwise=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_cm_pairwise_correlations.tsv",
+        matched_source_correlation_cm_summary=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_cm_summary.tsv",
+        matched_source_correlation_em_boxplot_png=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_em.png",
+        matched_source_correlation_em_boxplot_svg=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_em.svg",
+        matched_source_correlation_em_pairwise=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_em_pairwise_correlations.tsv",
+        matched_source_correlation_em_summary=f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_em_summary.tsv",
+        figure1c_control_distance_png=f"{PLOTS_DIR}/Sup_Figure_1/c.png",
+        figure1c_control_distance_svg=f"{PLOTS_DIR}/Sup_Figure_1/c.svg",
+        figure1c_control_distance_pairwise=f"{PLOTS_DIR}/Sup_Figure_1/c_pairwise_correlations.tsv",
+        figure1c_control_distance_summary=f"{PLOTS_DIR}/Sup_Figure_1/c_summary.tsv",
+        figure1c_control_distance_stats=f"{PLOTS_DIR}/Sup_Figure_1/c_stats.tsv",
+        cotransferred_naive_correlation_png=f"{PLOTS_DIR}/Sup_Figure_1/d.png",
+        cotransferred_naive_correlation_svg=f"{PLOTS_DIR}/Sup_Figure_1/d.svg",
+        cotransferred_naive_correlation_pairwise=f"{PLOTS_DIR}/Sup_Figure_1/d_pairwise_correlations.tsv",
+        cotransferred_naive_correlation_summary=f"{PLOTS_DIR}/Sup_Figure_1/d_summary.tsv",
+        cotransferred_naive_correlation_stats=f"{PLOTS_DIR}/Sup_Figure_1/d_stats.tsv",
+        heatmap_png=f"{PLOTS_DIR}/Sup_Figure_1/b.png",
+        heatmap_svg=f"{PLOTS_DIR}/Sup_Figure_1/b.svg",
+        sample_metadata=f"{PLOTS_DIR}/Sup_Figure_1/b_sample_metadata.tsv",
+        normalized_expression=f"{PLOTS_DIR}/Sup_Figure_1/b_normalized_expression.tsv",
+        row_scaled_expression=f"{PLOTS_DIR}/Sup_Figure_1/b_row_scaled_expression.tsv",
+        experimental_heatmap_png=f"{PLOTS_DIR}/Sup_Figure_1/b_experimental.png",
+        experimental_heatmap_svg=f"{PLOTS_DIR}/Sup_Figure_1/b_experimental.svg",
+        experimental_sample_metadata=f"{PLOTS_DIR}/Sup_Figure_1/b_experimental_sample_metadata.tsv",
+        experimental_normalized_expression=f"{PLOTS_DIR}/Sup_Figure_1/b_experimental_normalized_expression.tsv",
+        experimental_row_scaled_expression=f"{PLOTS_DIR}/Sup_Figure_1/b_experimental_row_scaled_expression.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --normalized-counts {input.normalized_counts} \
+            --pca-coordinates {input.pca_coordinates} \
+            --memory-pca-coordinates {input.memory_pca_coordinates} \
+            --metadata {input.metadata} \
+            --output-dir {PLOTS_DIR}/Sup_Figure_1
+        """
+
+rule Sup_Figure_1_2a_screen_top_gene_hit_heatmap:
+    """Gene-level heatmap of top significant hits across in vitro screen comparisons"""
+    input:
+        script=f"{SCRIPTS_DIR}/screen_top_gene_hit_heatmap.py",
+        d7_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7tcf7hi-low_100_21-03-01-18-00.txt",
+        d7_cont_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7conttcf7hi-low_100_21-03-01-18-04.txt",
+        d5_cont_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5contprdm1hi-low_100_21-03-01-18-17.txt",
+        d7_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7prdm1hi-low_100_21-03-01-18-03.txt",
+        d7_eomes="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7eomeshi-low_100_21-03-01-18-01.txt",
+        d5_tox="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5hyptoxhi-low_100_21-03-01-18-19.txt"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_2/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_2/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --output-dir {PLOTS_DIR}/Sup_Figure_2 \
+            --panel-stem a
+        """
+
+rule Sup_Figure_1_2b_go_enrichment_heatmap:
+    """GO enrichment heatmap from the original Figure 1 notebook, now Figure S2b"""
+    input:
+        script=f"{SCRIPTS_DIR}/screen_go_enrichment_heatmap.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_2/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_2/b.svg"
+    params:
+        min_overlap=1
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --output-dir {PLOTS_DIR}/Sup_Figure_2 \
+            --panel-stem b \
+            --min-overlap {params.min_overlap}
+        """
+
+rule Sup_Figure_1_2ab_all_pathway_enrichment:
+    """Cache all pathway enrichments across Figure S2a-b screen directions, masking half-count odds-ratio fallbacks"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_figure1_1cd_all_pathway_enrichment.py",
+        d7_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7tcf7hi-low_100_21-03-01-18-00.txt",
+        d7_cont_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7conttcf7hi-low_100_21-03-01-18-04.txt",
+        d5_cont_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5contprdm1hi-low_100_21-03-01-18-17.txt",
+        d7_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7prdm1hi-low_100_21-03-01-18-03.txt",
+        d7_eomes="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7eomeshi-low_100_21-03-01-18-01.txt",
+        d5_tox="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5hyptoxhi-low_100_21-03-01-18-19.txt",
+        my_utils_py=f"{MY_UTILS_DIR}/gene_list_interpretation.py",
+        go_catalog=f"{MY_UTILS_DIR}/pathways/enrichr/GO_Biological_Process_2025.gmt",
+        gocc_catalog=f"{MY_UTILS_DIR}/pathways/enrichr/GO_Cellular_Component_2025.gmt",
+        gomf_catalog=f"{MY_UTILS_DIR}/pathways/enrichr/GO_Molecular_Function_2025.gmt",
+        kegg_catalog=f"{MY_UTILS_DIR}/pathways/enrichr/KEGG_2019_Mouse.gmt",
+        reactome_catalog=f"{MY_UTILS_DIR}/pathways/enrichr/Reactome_2022.gmt",
+        wikipathways_catalog=f"{MY_UTILS_DIR}/pathways/enrichr/WikiPathways_2024_Mouse.gmt"
+    output:
+        enrichment=f"{PLOTS_DIR}/Sup_Figure_2/a_b_all_pathway_enrichment.tsv"
+    threads: NPROC
+    params:
+        my_utils_dir=MY_UTILS_DIR,
+        min_overlap=1
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --d7-tcf7 {input.d7_tcf7} \
+            --d7-cont-tcf7 {input.d7_cont_tcf7} \
+            --d5-cont-prdm1 {input.d5_cont_prdm1} \
+            --d7-prdm1 {input.d7_prdm1} \
+            --d7-eomes {input.d7_eomes} \
+            --d5-tox {input.d5_tox} \
+            --my-utils-dir {params.my_utils_dir} \
+            --output {output.enrichment} \
+            --threads {threads} \
+            --min-overlap {params.min_overlap}
+        """
+
+rule Sup_Figure_1_2ab_gene_pathway_linked_heatmap:
+    """Linked gene and pathway heatmaps for Figure S2a-b without half-count odds-ratio fallbacks"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_figure1_1cd_gene_pathway_linked_heatmap.py",
+        all_pathway_enrichment=rules.Sup_Figure_1_2ab_all_pathway_enrichment.output.enrichment,
+        d7_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7tcf7hi-low_100_21-03-01-18-00.txt",
+        d7_cont_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7conttcf7hi-low_100_21-03-01-18-04.txt",
+        d5_cont_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5contprdm1hi-low_100_21-03-01-18-17.txt",
+        d7_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7prdm1hi-low_100_21-03-01-18-03.txt",
+        d7_eomes="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7eomeshi-low_100_21-03-01-18-01.txt",
+        d5_tox="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5hyptoxhi-low_100_21-03-01-18-19.txt"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_2/a_b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_2/a_b.svg",
+        selected_genes=f"{PLOTS_DIR}/Sup_Figure_2/a_b_selected_genes.tsv",
+        selected_pathways=f"{PLOTS_DIR}/Sup_Figure_2/a_b_selected_pathways.tsv",
+        pathway_label_key=f"{PLOTS_DIR}/Sup_Figure_2/a_b_pathway_label_key.txt",
+        gene_summary=f"{PLOTS_DIR}/Sup_Figure_2/a_b_gene_summary.tsv",
+        gene_heatmap=f"{PLOTS_DIR}/Sup_Figure_2/a_b_gene_heatmap.tsv",
+        gene_neglog10_p=f"{PLOTS_DIR}/Sup_Figure_2/a_b_gene_neglog10_p.tsv",
+        pathway_support=f"{PLOTS_DIR}/Sup_Figure_2/a_b_pathway_support.tsv",
+        pathway_heatmap=f"{PLOTS_DIR}/Sup_Figure_2/a_b_pathway_heatmap.tsv",
+        pathway_pvalues=f"{PLOTS_DIR}/Sup_Figure_2/a_b_pathway_pvalues.tsv",
+        links=f"{PLOTS_DIR}/Sup_Figure_2/a_b_links.tsv"
+    params:
+        output_dir=f"{PLOTS_DIR}/Sup_Figure_2",
+        min_overlap=1
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --d7-tcf7 {input.d7_tcf7} \
+            --d7-cont-tcf7 {input.d7_cont_tcf7} \
+            --d5-cont-prdm1 {input.d5_cont_prdm1} \
+            --d7-prdm1 {input.d7_prdm1} \
+            --d7-eomes {input.d7_eomes} \
+            --d5-tox {input.d5_tox} \
+            --all-pathway-enrichment {input.all_pathway_enrichment} \
+            --output-dir {params.output_dir} \
+            --plot-stem a_b \
+            --min-overlap {params.min_overlap}
+        """
+
+rule Sup_Figure_1_1_screen_lfc_distance_heatmap_old:
+    """Reference-only Pearson correlation heatmap clustering in vitro screen log2 fold-change profiles"""
+    input:
+        script=f"{SCRIPTS_DIR}/screen_lfc_distance_heatmap.py",
+        d5_tcf7_std1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D51tcf7hi-low_100_21-03-01-18-13.txt",
+        d5_tcf7_std2="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D52tcf7hi-low_100_21-03-01-18-14.txt",
+        d7_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7tcf7hi-low_100_21-03-01-18-00.txt",
+        d7_cont_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7conttcf7hi-low_100_21-03-01-18-04.txt",
+        d5_cont_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5contprdm1hi-low_100_21-03-01-18-17.txt",
+        d7_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7prdm1hi-low_100_21-03-01-18-03.txt",
+        d7_eomes="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7eomeshi-low_100_21-03-01-18-01.txt",
+        d5_tox="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5hyptoxhi-low_100_21-03-01-18-19.txt"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_1/e_old.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_1/e_old.svg",
+        lfc_matrix=f"{PLOTS_DIR}/Sup_Figure_1/e_old_screen_lfc_matrix.tsv",
+        correlation=f"{PLOTS_DIR}/Sup_Figure_1/e_old_correlation_matrix.tsv",
+        distance=f"{PLOTS_DIR}/Sup_Figure_1/e_old_distance_matrix.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+rule Sup_Figure_1_1:
+    """Generate Figure S1 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_1/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_pca_coordinates.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_pca_coordinates.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_left.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_left.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_middle.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_middle.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_right.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_right.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_sample_metadata.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_cluster_order.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_correlation_all.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_correlation_cm.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/a_experimental_v2_correlation_em.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_pairwise_correlations.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_cm.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_cm.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_cm_pairwise_correlations.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_cm_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_em.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_em.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_em_pairwise_correlations.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v3_em_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_pairwise_correlations.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_cm.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_cm.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_cm_pairwise_correlations.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_cm_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_em.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_em.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_em_pairwise_correlations.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experiment_v4_em_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/c.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/c.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/c_pairwise_correlations.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/c_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/c_stats.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/d.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/d.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/d_pairwise_correlations.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/d_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/d_stats.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_sample_metadata.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_normalized_expression.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_row_scaled_expression.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experimental_sample_metadata.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experimental_normalized_expression.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_1/b_experimental_row_scaled_expression.tsv"
+
+rule Sup_Figure_1_2:
+    """Generate Figure S2 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_2/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_2/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_2/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_2/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_all_pathway_enrichment.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b.png",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_selected_genes.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_selected_pathways.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_pathway_label_key.txt",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_gene_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_gene_heatmap.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_gene_neglog10_p.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_pathway_support.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_pathway_heatmap.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_pathway_pvalues.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_2/a_b_links.tsv"
+
+rule Sup_Figure_1_and_2:
+    """Backward-compatible alias for Figure 1 supplementary figures"""
+    input:
+        rules.Sup_Figure_1_1.input,
+        rules.Sup_Figure_1_2.input
+
+# =============================================================================
+# FIGURE 1: In Vivo Tcf7 Screen Guide Abundance Comparisons
+# =============================================================================
+
+rule Figure1b_flow_activation_phenotype:
+    """CD44/CD62L flow-cytometry activation phenotype panel from raw FCS files"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure1b_flow_activation_phenotype.py",
+        flowjo_workspace="../Figure1_data_handoff/02_activation_flow/plot_exports_and_workspace/20-May-2025.wsp",
+        nt_na_initial="../Figure1_data_handoff/02_activation_flow/fcs_raw_2025-05-17_to_2025-05-23/Non-transduced Non-activated full panel.fcs",
+        nt_a_initial="../Figure1_data_handoff/02_activation_flow/fcs_raw_2025-05-17_to_2025-05-23/Non-transduced Activated full panel.fcs",
+        nt_na_3d="../Figure1_data_handoff/02_activation_flow/fcs_raw_2025-05-17_to_2025-05-23/Non-transduced Non-activated full panel 5_19.fcs",
+        nt_a_3d="../Figure1_data_handoff/02_activation_flow/fcs_raw_2025-05-17_to_2025-05-23/Non-transduced Activated full panel 5_19.fcs",
+        t_na_3d="../Figure1_data_handoff/02_activation_flow/fcs_raw_2025-05-17_to_2025-05-23/Transduced Non-activated full panel 5_19.fcs",
+        t_a_3d="../Figure1_data_handoff/02_activation_flow/fcs_raw_2025-05-17_to_2025-05-23/Transduced Activated full panel 5_19.fcs",
+        t_na_5d="../Figure1_data_handoff/02_activation_flow/fcs_raw_2025-05-17_to_2025-05-23/Transduced Non-activated full panel 5_23.fcs",
+        t_a_5d="../Figure1_data_handoff/02_activation_flow/fcs_raw_2025-05-17_to_2025-05-23/Transduced Activated full panel 5_23.fcs"
+    output:
+        png=f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype.png",
+        svg=f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype.svg",
+        samples=f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype_samples.tsv",
+        gate_stats=f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype_gate_stats.tsv",
+        panel_gate_stats=f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype_panel_gate_stats.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+rule Figure1c_rnaseq_heatmap:
+    """RNA-seq heatmap of naive-like transcriptional state from gcloud Tcf7 paper data"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure1c_rnaseq_heatmap.py",
+        normalized_counts=RNASEQ_DESEQ2_NORMALIZED_COUNTS,
+        metadata=TCELL_COMBO_METADATA
+    output:
+        png=f"{PLOTS_DIR}/Figure1/c.png",
+        svg=f"{PLOTS_DIR}/Figure1/c.svg",
+        gene_provenance=f"{PLOTS_DIR}/Figure1/c_gene_provenance.tsv",
+        collapsed=f"{PLOTS_DIR}/Figure1/c_collapsed_group_means.tsv",
+        row_scaled=f"{PLOTS_DIR}/Figure1/c_row_scaled_expression.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --normalized-counts {input.normalized_counts} \
+            --metadata {input.metadata} \
+            --output-dir {PLOTS_DIR}/Figure1 \
+            --panel-stem c \
+            --row-order reference
+        """
+
+rule Figure1h_left_cp1_tcf7_guide_abundance:
+    """Left plot for Figure 1h: CP1 Tcf7+ versus Tcf7- guide abundance scatter"""
+    output:
+        png=f"{PLOTS_DIR}/Figure1/h_left.png",
+        svg=f"{PLOTS_DIR}/Figure1/h_left.svg",
+        guide_stats=temp(f"{PLOTS_DIR}/Figure1/h_left_guide_stats.tsv")
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/in_vivo_tcf7_guide_abundance_scatter.py \
+            --screen cp1 \
+            --output-dir {PLOTS_DIR}/Figure1 \
+            --panel-letter h_left \
+            --guide-stats-output {output.guide_stats}
+        """
+
+rule Figure1h_right_cp3_tcf7_guide_abundance:
+    """Right plot for Figure 1h: CP3 Tcf7+ versus Tcf7- guide abundance scatter"""
+    output:
+        png=f"{PLOTS_DIR}/Figure1/h_right.png",
+        svg=f"{PLOTS_DIR}/Figure1/h_right.svg",
+        guide_stats=temp(f"{PLOTS_DIR}/Figure1/h_right_guide_stats.tsv")
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/in_vivo_tcf7_guide_abundance_scatter.py \
+            --screen cp3 \
+            --output-dir {PLOTS_DIR}/Figure1 \
+            --panel-letter h_right \
+            --guide-stats-output {output.guide_stats}
+        """
+
+rule Figure1a_cp1_tcf7_guide_abundance_v2:
+    """CP1 Tcf7+ versus Tcf7- guide abundance scatter with +1-pseudocount intercept-fit NB testing"""
+    output:
+        png=f"{PLOTS_DIR}/Figure1/a_v2.png",
+        svg=f"{PLOTS_DIR}/Figure1/a_v2.svg",
+        guide_stats=f"{PLOTS_DIR}/Figure1/a_v2_guide_stats.tsv",
+        fit_summary=f"{PLOTS_DIR}/Figure1/a_v2_fit_summary.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/in_vivo_tcf7_guide_abundance_scatter.py \
+            --screen cp1 \
+            --output-dir {PLOTS_DIR}/Figure1 \
+            --panel-letter a_v2 \
+            --fit-intercept \
+            --guide-stats-output {output.guide_stats} \
+            --fit-summary-output {output.fit_summary}
+        """
+
+rule Figure1b_cp3_tcf7_guide_abundance_v2:
+    """CP3 Tcf7+ versus Tcf7- guide abundance scatter with +1-pseudocount intercept-fit NB testing"""
+    output:
+        png=f"{PLOTS_DIR}/Figure1/b_v2.png",
+        svg=f"{PLOTS_DIR}/Figure1/b_v2.svg",
+        guide_stats=f"{PLOTS_DIR}/Figure1/b_v2_guide_stats.tsv",
+        fit_summary=f"{PLOTS_DIR}/Figure1/b_v2_fit_summary.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/in_vivo_tcf7_guide_abundance_scatter.py \
+            --screen cp3 \
+            --output-dir {PLOTS_DIR}/Figure1 \
+            --panel-letter b_v2 \
+            --fit-intercept \
+            --guide-stats-output {output.guide_stats} \
+            --fit-summary-output {output.fit_summary}
+        """
+
+rule Figure1_v2:
+    """Generate review-only Figure 1 intercept-fit panels"""
+    input:
+        f"{PLOTS_DIR}/Figure1/a_v2.png",
+        f"{PLOTS_DIR}/Figure1/a_v2.svg",
+        f"{PLOTS_DIR}/Figure1/a_v2_guide_stats.tsv",
+        f"{PLOTS_DIR}/Figure1/a_v2_fit_summary.tsv",
+        f"{PLOTS_DIR}/Figure1/b_v2.png",
+        f"{PLOTS_DIR}/Figure1/b_v2.svg",
+        f"{PLOTS_DIR}/Figure1/b_v2_guide_stats.tsv",
+        f"{PLOTS_DIR}/Figure1/b_v2_fit_summary.tsv"
+
+rule Table_1_1:
+    """Generate LCMV competitive-transfer source-data table for Figure 1d"""
+    input:
+        script=f"{SCRIPTS_DIR}/lcmv_competitive_transfer_table.py",
+        tidy=f"{PLOTS_DIR}/Figure1/d_lcmv_tidy_values.tsv",
+        input_ratios=f"{PLOTS_DIR}/Figure1/d_lcmv_input_ratios.tsv",
+        summary="../Figure1_data_handoff/04_lcmv_competitive_transfer/prism_and_summary/20200311_Frequencies.xlsx"
+    output:
+        table="supplementary_tables/1_1.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --tidy-values {input.tidy} \
+            --input-ratios {input.input_ratios} \
+            --summary-workbook {input.summary} \
+            --output {output.table}
+        """
+
+rule Table_1_2:
+    """Generate Figure 1e intracellular Tcf7 antibody pilot screen table with both ranked-tail scores"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure1e_pilot_screen_table.py",
+        plot_script=f"{SCRIPTS_DIR}/pilot_tcf7_validation_screens.py",
+        antibody="../raw_data/CRISPR_sort_screens/7_8_2020_CP1473_invitro_Tcf7screens/hypergeometric/Tcf7_Ab_(D_C)-(A_B)_100_20-07-11-15-03.txt"
+    output:
+        table="supplementary_tables/1_2.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --screen-stem e_top \
+            --output {output.table}
+        """
+
+rule Table_1_3:
+    """Generate Figure 1e Tcf7-GFP reporter pilot screen table with both ranked-tail scores"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure1e_pilot_screen_table.py",
+        plot_script=f"{SCRIPTS_DIR}/pilot_tcf7_validation_screens.py",
+        reporter="../raw_data/CRISPR_sort_screens/7_8_2020_CP1473_invitro_Tcf7screens/hypergeometric/Tcf7_GFP_(D_C)-(A_B)_100_20-07-11-15-03.txt"
+    output:
+        table="supplementary_tables/1_3.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --screen-stem e_bottom \
+            --output {output.table}
+        """
+
+rule Table_1_4:
+    """Generate Figure 1f whole-genome in vitro Tcf7 screen table with both ranked-tail scores"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure1f_whole_genome_screen_table.py",
+        plot_script=f"{SCRIPTS_DIR}/figure1f_from_old_copy.py",
+        screen="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/All_Tcf7_hi-low_100_21-03-06-16-45.txt"
+    output:
+        table="supplementary_tables/1_4.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --input {input.screen} \
+            --output {output.table}
+        """
+
+rule Table_1_5:
+    """Generate gene-level table for Figure S2a condition-specific screen comparisons"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_figure1_1c_screen_comparison_table.py",
+        d7_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7tcf7hi-low_100_21-03-01-18-00.txt",
+        d7_cont_tcf7="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7conttcf7hi-low_100_21-03-01-18-04.txt",
+        d5_cont_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5contprdm1hi-low_100_21-03-01-18-17.txt",
+        d7_prdm1="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7prdm1hi-low_100_21-03-01-18-03.txt",
+        d7_eomes="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D7eomeshi-low_100_21-03-01-18-01.txt",
+        d5_tox="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/D5hyptoxhi-low_100_21-03-01-18-19.txt"
+    output:
+        table="supplementary_tables/1_5.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --output {output.table}
+        """
+
+rule Table_1_6:
+    """Generate gene-level supplementary table for Figure 1h left from +1-pseudocount guide statistics"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure1_gene_level_table.py",
+        table=f"{PLOTS_DIR}/Figure1/h_left_guide_stats.tsv"
+    output:
+        table="supplementary_tables/1_6.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --input {input.table} \
+            --output {output.table}
+        """
+
+rule Table_1_7:
+    """Generate gene-level supplementary table for Figure 1h right from +1-pseudocount guide statistics"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure1_gene_level_table.py",
+        table=f"{PLOTS_DIR}/Figure1/h_right_guide_stats.tsv"
+    output:
+        table="supplementary_tables/1_7.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --input {input.table} \
+            --output {output.table}
+        """
+
+rule Figure1h_tcf7_guide_abundance_legend:
+    """Standalone legend for Figure 1h Tcf7 guide abundance plots"""
+    output:
+        png=f"{PLOTS_DIR}/Figure1/h_legend.png",
+        svg=f"{PLOTS_DIR}/Figure1/h_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/figure1_tcf7_guide_abundance_legend.py
+        """
+
+rule Figure1ef_legend:
+    """Standalone legend for Figure 1e-f in vitro Tcf7 screen volcano plots"""
+    output:
+        png=f"{PLOTS_DIR}/Figure1/1ef_legend.png",
+        svg=f"{PLOTS_DIR}/Figure1/1ef_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/figure1ef_legend.py
+        """
+
+rule Figure1d_lcmv_competitive_transfer:
+    """LCMV competitive-transfer validation of naive transduced P14 behavior"""
+    input:
+        script=f"{SCRIPTS_DIR}/lcmv_competitive_transfer_figure1d.py",
+        prism="../Figure1_data_handoff/04_lcmv_competitive_transfer/prism_and_summary/20200311_Frequencies.pzfx"
+    output:
+        png=f"{PLOTS_DIR}/Figure1/d.png",
+        svg=f"{PLOTS_DIR}/Figure1/d.svg",
+        input_ratios=f"{PLOTS_DIR}/Figure1/d_lcmv_input_ratios.tsv",
+        tidy=f"{PLOTS_DIR}/Figure1/d_lcmv_tidy_values.tsv",
+        phenotype_control_split=f"{PLOTS_DIR}/Figure1/d_lcmv_phenotype_control_split.tsv",
+        metric_summary=f"{PLOTS_DIR}/Figure1/d_lcmv_metric_summary.tsv",
+        stats=f"{PLOTS_DIR}/Figure1/d_lcmv_stats.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --prism {input.prism} \
+            --analysis-dir {PLOTS_DIR}/Figure1 \
+            --figure-dir {PLOTS_DIR}/Figure1 \
+            --panel-stem d \
+            --text-scale 1.2 \
+            --axis-text-scale 1.8 \
+            --width-scale 1.2375 \
+            --height-scale 1.18 \
+            --title-scale 1.2 \
+            --layout 2x2
+        """
+
+rule Figure1d_experimental_lcmv_competitive_transfer:
+    """Experimental Figure 1d version including the control-control benchmark"""
+    input:
+        script=f"{SCRIPTS_DIR}/lcmv_competitive_transfer_figure1d.py",
+        prism="../Figure1_data_handoff/04_lcmv_competitive_transfer/prism_and_summary/20200311_Frequencies.pzfx"
+    output:
+        png=f"{PLOTS_DIR}/Figure1/1d_experimental.png",
+        svg=f"{PLOTS_DIR}/Figure1/1d_experimental.svg",
+        input_ratios=f"{PLOTS_DIR}/Figure1/1d_experimental_lcmv_input_ratios.tsv",
+        tidy=f"{PLOTS_DIR}/Figure1/1d_experimental_lcmv_tidy_values.tsv",
+        phenotype_control_split=f"{PLOTS_DIR}/Figure1/1d_experimental_lcmv_phenotype_control_split.tsv",
+        metric_summary=f"{PLOTS_DIR}/Figure1/1d_experimental_lcmv_metric_summary.tsv",
+        stats=f"{PLOTS_DIR}/Figure1/1d_experimental_lcmv_stats.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --prism {input.prism} \
+            --analysis-dir {PLOTS_DIR}/Figure1 \
+            --figure-dir {PLOTS_DIR}/Figure1 \
+            --panel-stem 1d_experimental \
+            --panel-version benchmark \
+            --text-scale 1.2 \
+            --axis-text-scale 1.1 \
+            --width-scale 1.25 \
+            --layout 2x2
+        """
+
+rule Figure1e_pilot_validation_screens:
+    """Pilot in vitro Tcf7 validation screen volcano plots"""
+    input:
+        script=f"{SCRIPTS_DIR}/pilot_tcf7_validation_screens.py",
+        antibody="../raw_data/CRISPR_sort_screens/7_8_2020_CP1473_invitro_Tcf7screens/hypergeometric/Tcf7_Ab_(D_C)-(A_B)_100_20-07-11-15-03.txt",
+        reporter="../raw_data/CRISPR_sort_screens/7_8_2020_CP1473_invitro_Tcf7screens/hypergeometric/Tcf7_GFP_(D_C)-(A_B)_100_20-07-11-15-03.txt"
+    output:
+        top_png=f"{PLOTS_DIR}/Figure1/e_top.png",
+        top_svg=f"{PLOTS_DIR}/Figure1/e_top.svg",
+        bottom_png=f"{PLOTS_DIR}/Figure1/e_bottom.png",
+        bottom_svg=f"{PLOTS_DIR}/Figure1/e_bottom.svg"
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+rule Figure1f_whole_genome_screen:
+    """Whole-genome in vitro Tcf7 screen volcano plot"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure1f_from_old_copy.py",
+        screen="../raw_data/CRISPR_sort_screens/2_26_2021_BRIE_run1/hypergeometric/tcf7.txt"
+    output:
+        screen_png=f"{PLOTS_DIR}/Figure1/f.png",
+        screen_svg=f"{PLOTS_DIR}/Figure1/f.svg"
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+rule Figure1g_whole_genome_pathway_summary:
+    """Recovered pathway summary for the whole-genome in vitro Tcf7 screen"""
+    input:
+        script=f"{SCRIPTS_DIR}/whole_genome_tcf7_pathway_summary.py",
+        selected_terms="../Figure1_data_handoff/08_codex_handoff_2026_05_01/analysis_outputs/whole_genome_pathway_analysis_2026-03-13/figure1_pathway_summary/whole_genome_tcf7_pathway_summary_selected_terms.tsv",
+        up_go="../Figure1_data_handoff/08_codex_handoff_2026_05_01/analysis_outputs/whole_genome_pathway_analysis_2026-03-13/up_GO_Biological_Process_2025.tsv",
+        up_reactome="../Figure1_data_handoff/08_codex_handoff_2026_05_01/analysis_outputs/whole_genome_pathway_analysis_2026-03-13/up_Reactome_2022.tsv",
+        up_kegg="../Figure1_data_handoff/08_codex_handoff_2026_05_01/analysis_outputs/whole_genome_pathway_analysis_2026-03-13/up_KEGG_2019_Mouse.tsv",
+        up_wikipathways="../Figure1_data_handoff/08_codex_handoff_2026_05_01/analysis_outputs/whole_genome_pathway_analysis_2026-03-13/up_WikiPathways_2024_Mouse.tsv",
+        down_go="../Figure1_data_handoff/08_codex_handoff_2026_05_01/analysis_outputs/whole_genome_pathway_analysis_2026-03-13/down_GO_Biological_Process_2025.tsv",
+        down_reactome="../Figure1_data_handoff/08_codex_handoff_2026_05_01/analysis_outputs/whole_genome_pathway_analysis_2026-03-13/down_Reactome_2022.tsv",
+        down_kegg="../Figure1_data_handoff/08_codex_handoff_2026_05_01/analysis_outputs/whole_genome_pathway_analysis_2026-03-13/down_KEGG_2019_Mouse.tsv"
+    output:
+        pathway_png=f"{PLOTS_DIR}/Figure1/g.png",
+        pathway_svg=f"{PLOTS_DIR}/Figure1/g.svg",
+        pathway_sources=f"{PLOTS_DIR}/Figure1/g_pathway_sources.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script}
+        """
+
+rule Figure1:
+    """Generate Figure 1 panels and related supplementary tables"""
+    input:
+        f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype.png",
+        f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype.svg",
+        f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype_samples.tsv",
+        f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype_gate_stats.tsv",
+        f"{PLOTS_DIR}/Figure1/b_flow_activation_phenotype_panel_gate_stats.tsv",
+        f"{PLOTS_DIR}/Figure1/c.png",
+        f"{PLOTS_DIR}/Figure1/c.svg",
+        f"{PLOTS_DIR}/Figure1/c_gene_provenance.tsv",
+        f"{PLOTS_DIR}/Figure1/c_collapsed_group_means.tsv",
+        f"{PLOTS_DIR}/Figure1/c_row_scaled_expression.tsv",
+        f"{PLOTS_DIR}/Figure1/d.png",
+        f"{PLOTS_DIR}/Figure1/d.svg",
+        f"{PLOTS_DIR}/Figure1/e_top.png",
+        f"{PLOTS_DIR}/Figure1/e_top.svg",
+        f"{PLOTS_DIR}/Figure1/e_bottom.png",
+        f"{PLOTS_DIR}/Figure1/e_bottom.svg",
+        f"{PLOTS_DIR}/Figure1/1ef_legend.png",
+        f"{PLOTS_DIR}/Figure1/1ef_legend.svg",
+        f"{PLOTS_DIR}/Figure1/f.png",
+        f"{PLOTS_DIR}/Figure1/f.svg",
+        f"{PLOTS_DIR}/Figure1/g.png",
+        f"{PLOTS_DIR}/Figure1/g.svg",
+        f"{PLOTS_DIR}/Figure1/g_pathway_sources.tsv",
+        f"{PLOTS_DIR}/Figure1/h_left.png",
+        f"{PLOTS_DIR}/Figure1/h_left.svg",
+        f"{PLOTS_DIR}/Figure1/h_right.png",
+        f"{PLOTS_DIR}/Figure1/h_right.svg",
+        f"{PLOTS_DIR}/Figure1/h_legend.png",
+        f"{PLOTS_DIR}/Figure1/h_legend.svg",
+        "supplementary_tables/1_1.tsv",
+        "supplementary_tables/1_2.tsv",
+        "supplementary_tables/1_3.tsv",
+        "supplementary_tables/1_4.tsv",
+        "supplementary_tables/1_5.tsv",
+        "supplementary_tables/1_6.tsv",
+        "supplementary_tables/1_7.tsv"
+
+# =============================================================================
+# FIGURE 2: In Vivo Perturb-seq of CD8+ TILs
+# =============================================================================
+
+rule Figure2b_umap_cell_type_clustering:
+    """UMAP clustering visualization colored by cell type"""
+    output:
+        png=f"{PLOTS_DIR}/Figure2/b.png",
+        svg=f"{PLOTS_DIR}/Figure2/b.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/umap_cell_type_clustering.py
+        """
+
+rule Figure2c_cell_type_marker_dotplot:
+    """Cell type marker dotplot (all cells and control-only)"""
+    output:
+        png=f"{PLOTS_DIR}/Figure2/c.png",
+        svg=f"{PLOTS_DIR}/Figure2/c.svg",
+        png_control=f"{PLOTS_DIR}/Figure2/c_control.png",
+        svg_control=f"{PLOTS_DIR}/Figure2/c_control.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/cell_type_marker_dotplot.py
+        """
+
+rule Figure2d_umap_cell_cycle_phase:
+    """UMAP visualization colored by cell cycle phase"""
+    output:
+        png=f"{PLOTS_DIR}/Figure2/d.png",
+        svg=f"{PLOTS_DIR}/Figure2/d.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/umap_cell_cycle_phase.py
+        """
+
+rule Figure2_cell_cycle_legend:
+    """Standalone cell cycle phase legend"""
+    output:
+        png=f"{PLOTS_DIR}/Figure2/cell_cycle_legend.png",
+        svg=f"{PLOTS_DIR}/Figure2/cell_cycle_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/cell_cycle_legend_standalone.py
+        """
+
+rule Figure2e_signature_score_heatmap:
+    """Signature score heatmap"""
+    output:
+        png=f"{PLOTS_DIR}/Figure2/e.png",
+        svg=f"{PLOTS_DIR}/Figure2/e.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/signature_score_heatmap.py
+        """
+
+rule Figure2f_cell_type_proportions_stacked_bar:
+    """Cell type proportions stacked bar chart"""
+    output:
+        png=f"{PLOTS_DIR}/Figure2/f.png",
+        svg=f"{PLOTS_DIR}/Figure2/f.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/cell_type_proportions_stacked_bar.py
+        """
+
+rule Figure2g_de_genes_heatmap:
+    """Differential expression genes heatmap"""
+    output:
+        png=f"{PLOTS_DIR}/Figure2/g.png",
+        svg=f"{PLOTS_DIR}/Figure2/g.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/de_genes_heatmap.py
+        """
+
+rule Figure2_legend:
+    """Standalone cell type legend with reversed order"""
+    output:
+        png=f"{PLOTS_DIR}/Figure2/legend.png",
+        svg=f"{PLOTS_DIR}/Figure2/legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/cell_type_legend_standalone.py
+        """
+
+# Figure S3
+rule Sup_Figure_2_1a_expression_umaps:
+    """Marker-gene UMAP table for the gene10 dataset (Figure S3a)"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_3/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_3/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_figure2_expression_umaps.py
+        """
+
+rule Sup_Figure_2_1b_control_marker_dotplot:
+    """Control-only marker dotplot for the gene10 dataset (Figure S3b)"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_3/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_3/b.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_figure2_control_marker_dotplot.py
+        """
+
+rule Sup_Figure_2_1c_signature_gene_heatmap:
+    """Gene-level heatmaps of curated representative signature genes (Figure S3c-e)"""
+    input:
+        curated="config/sup_figure2_1c_manual_curation.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_3/c.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_3/c.svg",
+        png_d=f"{PLOTS_DIR}/Sup_Figure_3/d.png",
+        svg_d=f"{PLOTS_DIR}/Sup_Figure_3/d.svg",
+        png_e=f"{PLOTS_DIR}/Sup_Figure_3/e.png",
+        svg_e=f"{PLOTS_DIR}/Sup_Figure_3/e.svg",
+        png_legend=f"{PLOTS_DIR}/Sup_Figure_3/signature_heatmap_legend.png",
+        svg_legend=f"{PLOTS_DIR}/Sup_Figure_3/signature_heatmap_legend.svg",
+        candidates=f"{PLOTS_DIR}/Sup_Figure_3/c_candidates.tsv",
+        selected=f"{PLOTS_DIR}/Sup_Figure_3/c_selected_genes.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_figure2_signature_gene_heatmap.py
+        """
+
+rule Sup_Figure_2_1:
+    """Generate Figure S3 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_3/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_3/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_3/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_3/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_3/c.png",
+        f"{PLOTS_DIR}/Sup_Figure_3/c.svg",
+        f"{PLOTS_DIR}/Sup_Figure_3/d.png",
+        f"{PLOTS_DIR}/Sup_Figure_3/d.svg",
+        f"{PLOTS_DIR}/Sup_Figure_3/e.png",
+        f"{PLOTS_DIR}/Sup_Figure_3/e.svg",
+        f"{PLOTS_DIR}/Sup_Figure_3/signature_heatmap_legend.png",
+        f"{PLOTS_DIR}/Sup_Figure_3/signature_heatmap_legend.svg",
+        f"{PLOTS_DIR}/Sup_Figure_3/c_candidates.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_3/c_selected_genes.tsv"
+
+# =============================================================================
+# FIGURE 3: Clonal Barcoded Lineage Tracing
+# =============================================================================
+
+rule Figure3bc_clone_size_and_umaps:
+    """Clone size distribution (3b) and UMAP visualizations of selected clones (3c)"""
+    output:
+        png_b=f"{PLOTS_DIR}/Figure3/b.png",
+        svg_b=f"{PLOTS_DIR}/Figure3/b.svg",
+        png_c=f"{PLOTS_DIR}/Figure3/c.png",
+        svg_c=f"{PLOTS_DIR}/Figure3/c.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/clone_size_distribution_and_umaps.py
+        """
+
+rule Figure3d_isotonic_regression_cell_type_proportions:
+    """Isotonic regression fits showing cell type proportion vs clone size"""
+    output:
+        png=f"{PLOTS_DIR}/Figure3/d.png",
+        svg=f"{PLOTS_DIR}/Figure3/d.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/isotonic_regression_cell_type_proportions.py
+        """
+
+rule Figure3d_isotonic_regression_cell_type_proportions_legend:
+    """Standalone legend for Figure 3d isotonic regression cell type plot"""
+    output:
+        png=f"{PLOTS_DIR}/Figure3/d_legend.png",
+        svg=f"{PLOTS_DIR}/Figure3/d_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/isotonic_regression_cell_type_proportions_legend.py
+        """
+
+rule Figure3e_isotonic_regression_cell_count:
+    """Isotonic regression for cell counts vs clone size"""
+    output:
+        png=f"{PLOTS_DIR}/Figure3/e.png",
+        svg=f"{PLOTS_DIR}/Figure3/e.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/isotonic_regression_cell_count.py
+        """
+
+rule Figure3e_isotonic_regression_cell_count_legend:
+    """Standalone legend for Figure 3e isotonic regression cell count plot"""
+    output:
+        png=f"{PLOTS_DIR}/Figure3/e_legend.png",
+        svg=f"{PLOTS_DIR}/Figure3/e_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/isotonic_regression_cell_count_legend.py
+        """
+
+rule Figure3f_isotonic_regression_log2_observed_expected:
+    """Normalized isotonic regression showing log2 enrichment/depletion"""
+    output:
+        png=f"{PLOTS_DIR}/Figure3/f.png",
+        svg=f"{PLOTS_DIR}/Figure3/f.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/isotonic_regression_log2_observed_expected.py
+        """
+
+# Figure S5 panels
+rule Sup_Figure_3_1a_clone_distribution_by_guide:
+    """Clone distribution analysis for targeting guides (a_1) and NT guides (a_2)"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5/a_1.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5/a_1.svg",
+        png_nt=f"{PLOTS_DIR}/Sup_Figure_5/a_2.png",
+        svg_nt=f"{PLOTS_DIR}/Sup_Figure_5/a_2.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/clone_distribution_by_guide.py
+        """
+
+rule Sup_Figure_3_1b_umap_clone_size_gradient:
+    """UMAP plot colored by clone size"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5/b.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/umap_clone_size_gradient.py
+        """
+
+# Figure S6 panels
+rule Sup_Figure_3_2a_condition_clone_size_histogram:
+    """Overlapping histogram of clone sizes for Isotype and anti-PD-1 conditions"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_6/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_6/a.svg",
+        legend_png=f"{PLOTS_DIR}/Sup_Figure_6/a_legend.png",
+        legend_svg=f"{PLOTS_DIR}/Sup_Figure_6/a_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_condition_clone_size_histogram.py --metric clone_size --stem a
+        """
+
+rule Sup_Figure_3_2b_nt_condition_isotonic:
+    """Isotonic regression fits for NT clones split by Isotype and anti-PD-1"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_6/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_6/b.svg",
+        legend_png=f"{PLOTS_DIR}/Sup_Figure_6/b_legend.png",
+        legend_svg=f"{PLOTS_DIR}/Sup_Figure_6/b_legend.svg",
+        significant_tests=f"{PLOTS_DIR}/Sup_Figure_6/b_significant_tests.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_nt_condition_isotonic.py
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_nt_condition_isotonic_legend.py
+        """
+
+rule Sup_Figure_3_2c_condition_progenitor_proportion_histogram:
+    """Overlapping histogram of clone-level progenitor-or-cycling proportions for Isotype and anti-PD-1 conditions"""
+    input:
+        significant_tests=f"{PLOTS_DIR}/Sup_Figure_6/b_significant_tests.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_6/c_1.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_6/c_1.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_condition_clone_size_histogram.py --metric progenitor_proportion --stem c_1 --no-legend
+        """
+
+rule Sup_Figure_3_2d_condition_progenitor_cycling_proportion_histogram:
+    """Overlapping histogram of clone-level Progenitor Cycling proportions for Isotype and anti-PD-1 conditions"""
+    input:
+        significant_tests=f"{PLOTS_DIR}/Sup_Figure_6/b_significant_tests.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_6/c_2.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_6/c_2.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_condition_clone_size_histogram.py --metric cell_type_proportion --cell-type "Progenitor Cycling" --stem c_2 --no-legend
+        """
+
+rule Sup_Figure_3_2e_condition_cycling_proportion_histogram:
+    """Overlapping histogram of clone-level Cycling proportions for Isotype and anti-PD-1 conditions"""
+    input:
+        significant_tests=f"{PLOTS_DIR}/Sup_Figure_6/b_significant_tests.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_6/c_3.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_6/c_3.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_condition_clone_size_histogram.py --metric cell_type_proportion --cell-type "Cycling" --stem c_3 --no-legend
+        """
+
+rule Sup_Figure_3_2d_clone_size_heatmap:
+    """Heatmap of perturbation effects on clone size across All, Isotype, and anti-PD-1 conditions"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_6/d.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_6/d.svg",
+        tests=f"{PLOTS_DIR}/Sup_Figure_6/d_clone_size_tests.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_condition_clone_size_heatmap.py
+        """
+
+rule Sup_Figure_3_2e_trim28_clone_size_histogram:
+    """Pooled Trim28-versus-NT clone-size histogram illustrating the Figure S6d test"""
+    input:
+        tests=f"{PLOTS_DIR}/Sup_Figure_6/d_clone_size_tests.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_6/e.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_6/e.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_trim28_clone_size_histogram.py
+        """
+
+rule Sup_Figure_3_2f_condition_clone_odds_ratio_forest:
+    """Forest plot of condition-specific clone-count odds ratios relative to NT"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_6/f.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_6/f.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_condition_clone_odds_ratio_forest.py
+        """
+
+rule Sup_Figure_3_3a_construct_count_violin:
+    """Construct-count distributions for large single-construct clones used in Figure S4"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_construct_count_violin.py
+        """
+
+rule Sup_Figure_3_3b_construct_assignment_dendrogram:
+    """UpSet plot of pre-LP putative clones sharing constructs with focal retained clones"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4/b.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_construct_assignment_dendrogram.py
+        """
+
+rule Sup_Figure_3_3c_hto_clonal_heatmap:
+    """Legacy HTO-versus-clonal 2x2 count and proportion heatmaps"""
+    output:
+        png_count=f"{PLOTS_DIR}/Sup_Figure_4/c_1.png",
+        svg_count=f"{PLOTS_DIR}/Sup_Figure_4/c_1.svg",
+        png_prop=f"{PLOTS_DIR}/Sup_Figure_4/c_2.png",
+        svg_prop=f"{PLOTS_DIR}/Sup_Figure_4/c_2.svg",
+        counts=f"{PLOTS_DIR}/Sup_Figure_4/c_counts.tsv",
+        proportions=f"{PLOTS_DIR}/Sup_Figure_4/c_proportions.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_hto_clonal_heatmap.py
+        """
+
+rule Figure3:
+    """Generate all Figure 3 panels"""
+    input:
+        f"{PLOTS_DIR}/Figure3/b.png",
+        f"{PLOTS_DIR}/Figure3/b.svg",
+        f"{PLOTS_DIR}/Figure3/c.png",
+        f"{PLOTS_DIR}/Figure3/c.svg",
+        f"{PLOTS_DIR}/Figure3/d.png",
+        f"{PLOTS_DIR}/Figure3/d.svg",
+        f"{PLOTS_DIR}/Figure3/d_legend.png",
+        f"{PLOTS_DIR}/Figure3/d_legend.svg",
+        f"{PLOTS_DIR}/Figure3/e.png",
+        f"{PLOTS_DIR}/Figure3/e.svg",
+        f"{PLOTS_DIR}/Figure3/e_legend.png",
+        f"{PLOTS_DIR}/Figure3/e_legend.svg",
+        f"{PLOTS_DIR}/Figure3/f.png",
+        f"{PLOTS_DIR}/Figure3/f.svg"
+
+rule Sup_Figure_3_1:
+    """Generate Figure S5 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_5/a_1.png",
+        f"{PLOTS_DIR}/Sup_Figure_5/a_1.svg",
+        f"{PLOTS_DIR}/Sup_Figure_5/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_5/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_5/a_2.png",
+        f"{PLOTS_DIR}/Sup_Figure_5/a_2.svg"
+
+rule Sup_Figure_3_2:
+    """Generate Figure S6 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_6/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_6/a_legend.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/a_legend.svg",
+        f"{PLOTS_DIR}/Sup_Figure_6/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_6/b_legend.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/b_legend.svg",
+        f"{PLOTS_DIR}/Sup_Figure_6/b_significant_tests.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_6/c_1.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/c_1.svg",
+        f"{PLOTS_DIR}/Sup_Figure_6/c_2.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/c_2.svg",
+        f"{PLOTS_DIR}/Sup_Figure_6/c_3.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/c_3.svg",
+        f"{PLOTS_DIR}/Sup_Figure_6/d.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/d.svg",
+        f"{PLOTS_DIR}/Sup_Figure_6/d_clone_size_tests.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_6/e.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/e.svg",
+        f"{PLOTS_DIR}/Sup_Figure_6/f.png",
+        f"{PLOTS_DIR}/Sup_Figure_6/f.svg"
+
+rule Sup_Figure_3_3:
+    """Generate Figure S4 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_4/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_4/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_4/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4/c_1.png",
+        f"{PLOTS_DIR}/Sup_Figure_4/c_1.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4/c_2.png",
+        f"{PLOTS_DIR}/Sup_Figure_4/c_2.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4/c_counts.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_4/c_proportions.tsv"
+
+rule Sup_Figure_5_tmp_a_trm_clone_umaps:
+    """UMAPs highlighting clones with the most TRM-like cells"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_tmp/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_tmp/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig3_trm_clone_umaps.py
+        """
+
+rule Sup_Figure_5_tmp:
+    """Generate temporary internal Sup_Figure_5_tmp panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_5_tmp/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_5_tmp/a.svg"
+
+# =============================================================================
+# FIGURE 4: Clonal Information Improves Ability to Detect Perturbation Effects
+# =============================================================================
+
+rule Figure4a_guide_abundance_vs_cells:
+    """Scatter plot of initial guide abundance vs number of cells with statistical analysis"""
+    output:
+        png=f"{PLOTS_DIR}/Figure4/a.png",
+        svg=f"{PLOTS_DIR}/Figure4/a.svg",
+        table="supplementary_tables/4_1.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/guide_abundance_vs_cells.py
+        """
+
+rule Figure4b_guide_abundance_vs_clones:
+    """Scatter plot of initial guide abundance vs number of clones with statistical analysis"""
+    output:
+        png=f"{PLOTS_DIR}/Figure4/b.png",
+        svg=f"{PLOTS_DIR}/Figure4/b.svg",
+        table="supplementary_tables/4_2.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/guide_abundance_vs_clones.py
+        """
+
+rule Figure4c_cell_based_proportion_heatmap:
+    """Cell-based cell type proportion heatmap using Fisher exact tests"""
+    output:
+        png=f"{PLOTS_DIR}/Figure4/c.png",
+        svg=f"{PLOTS_DIR}/Figure4/c.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/cell_based_proportion_heatmap.py
+        """
+
+rule Figure4d_clone_based_proportion_heatmap:
+    """Clone-based cell type proportion heatmap using Wilcoxon rank-sum tests"""
+    output:
+        png=f"{PLOTS_DIR}/Figure4/d.png",
+        svg=f"{PLOTS_DIR}/Figure4/d.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/clone_based_proportion_heatmap.py
+        """
+
+rule Figure4e_loss_equation:
+    """Standalone loss equations for Figure 4e (total, ECDF, isotonic components)"""
+    output:
+        total_pdf=f"{PLOTS_DIR}/Figure4/e_equation_total.pdf",
+        total_png=f"{PLOTS_DIR}/Figure4/e_equation_total.png",
+        ecdf_pdf=f"{PLOTS_DIR}/Figure4/e_equation_ecdf.pdf",
+        ecdf_png=f"{PLOTS_DIR}/Figure4/e_equation_ecdf.png",
+        iso_pdf=f"{PLOTS_DIR}/Figure4/e_equation_iso.pdf",
+        iso_png=f"{PLOTS_DIR}/Figure4/e_equation_iso.png",
+        theta_pdf=f"{PLOTS_DIR}/Figure4/e_equation_theta.pdf",
+        theta_png=f"{PLOTS_DIR}/Figure4/e_equation_theta.png"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/figure4e_loss_equation.py
+        """
+
+
+rule Figure4f_lowest_loss_projection:
+    """Generate Figure 4f 3D panel plus Figure 4h projection views with highlighted NT points and standalone legend"""
+    output:
+        png=f"{PLOTS_DIR}/Figure4/f.png",
+        legend_png=f"{PLOTS_DIR}/Figure4/f_legend.png",
+        legend_svg=f"{PLOTS_DIR}/Figure4/f_legend.svg",
+        equation_png=f"{PLOTS_DIR}/Figure4/f_equation.png",
+        equation_pdf=f"{PLOTS_DIR}/Figure4/f_equation.pdf",
+        projections_png=f"{PLOTS_DIR}/Figure4/h.png",
+        projections_pdf=f"{PLOTS_DIR}/Figure4/h.pdf"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/lowest_loss_projection_and_diagnostics.py --mode projection
+        """
+
+rule Figure4g_lowest_loss_diagnostics:
+    """Diagnostics comparing real NT clones vs highlighted simulated clones"""
+    output:
+        png=f"{PLOTS_DIR}/Figure4/g.png",
+        svg=f"{PLOTS_DIR}/Figure4/g.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/lowest_loss_projection_and_diagnostics.py --mode diagnostics
+        """
+
+rule Figure4i_parameter_range_bar_plot:
+    """Parameter range comparison with highlighted random NT points"""
+    output:
+        png=f"{PLOTS_DIR}/Figure4/i.png",
+        svg=f"{PLOTS_DIR}/Figure4/i.svg",
+        legend_png=f"{PLOTS_DIR}/Figure4/i_legend.png",
+        legend_svg=f"{PLOTS_DIR}/Figure4/i_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/parameter_range_bar_plot.py
+        """
+
+rule Figure4:
+    """Generate all Figure 4 panels"""
+    input:
+        f"{PLOTS_DIR}/Figure4/a.png",
+        f"{PLOTS_DIR}/Figure4/a.svg",
+        f"{PLOTS_DIR}/Figure4/b.png",
+        f"{PLOTS_DIR}/Figure4/b.svg",
+        f"{PLOTS_DIR}/Figure4/c.png",
+        f"{PLOTS_DIR}/Figure4/c.svg",
+        f"{PLOTS_DIR}/Figure4/d.png",
+        f"{PLOTS_DIR}/Figure4/d.svg",
+        f"{PLOTS_DIR}/Figure4/e_equation_total.pdf",
+        f"{PLOTS_DIR}/Figure4/e_equation_total.png",
+        f"{PLOTS_DIR}/Figure4/e_equation_ecdf.pdf",
+        f"{PLOTS_DIR}/Figure4/e_equation_ecdf.png",
+        f"{PLOTS_DIR}/Figure4/e_equation_iso.pdf",
+        f"{PLOTS_DIR}/Figure4/e_equation_iso.png",
+        f"{PLOTS_DIR}/Figure4/e_equation_theta.pdf",
+        f"{PLOTS_DIR}/Figure4/e_equation_theta.png",
+        f"{PLOTS_DIR}/Figure4/f.png",
+        f"{PLOTS_DIR}/Figure4/f_legend.png",
+        f"{PLOTS_DIR}/Figure4/f_legend.svg",
+        f"{PLOTS_DIR}/Figure4/f_equation.png",
+        f"{PLOTS_DIR}/Figure4/f_equation.pdf",
+        f"{PLOTS_DIR}/Figure4/g.png",
+        f"{PLOTS_DIR}/Figure4/g.svg",
+        f"{PLOTS_DIR}/Figure4/h.png",
+        f"{PLOTS_DIR}/Figure4/h.pdf",
+        f"{PLOTS_DIR}/Figure4/i.png",
+        f"{PLOTS_DIR}/Figure4/i.svg",
+        f"{PLOTS_DIR}/Figure4/i_legend.png",
+        f"{PLOTS_DIR}/Figure4/i_legend.svg"
+
+# Figure S7
+rule Sup_Figure_4_1a_control_clone_dominance:
+    """Control-guide clone dominance summary for Figure S7a"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_7/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_7/a.svg",
+        summary=f"{PLOTS_DIR}/Sup_Figure_7/a_summary.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_control_clone_dominance.py
+        """
+
+rule Sup_Figure_4_1b_intergenic4_control_pie_table:
+    """INTERGENIC-4 versus other-control example for the Figure 4c cell-based Fisher test"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_7/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_7/b.svg",
+        contingency=f"{PLOTS_DIR}/Sup_Figure_7/b_contingency.tsv",
+        stats=f"{PLOTS_DIR}/Sup_Figure_7/b_stats.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_intergenic4_control_pie_table.py
+        """
+
+rule Sup_Figure_4_1c_clone_progenitor_histograms:
+    """Guide-level progenitor histograms for the significant Bach2 and Prdm1 guides"""
+    output:
+        png_bach2=f"{PLOTS_DIR}/Sup_Figure_7/c_1.png",
+        svg_bach2=f"{PLOTS_DIR}/Sup_Figure_7/c_1.svg",
+        png_prdm1=f"{PLOTS_DIR}/Sup_Figure_7/c_2.png",
+        svg_prdm1=f"{PLOTS_DIR}/Sup_Figure_7/c_2.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_clone_proportion_histogram.py --perturbation Bach2 --cell-type Progenitor --stem c_1
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_clone_proportion_histogram.py --perturbation Prdm1 --cell-type Progenitor --stem c_2
+        """
+
+rule Sup_Figure_4_1d_trim28_cycling_histogram:
+    """Guide-level cycling histogram for the significant Trim28 guide"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_7/d.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_7/d.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_clone_proportion_histogram.py --perturbation Trim28 --cell-type Cycling --stem d
+        """
+
+rule Sup_Figure_4_1:
+    """Generate Figure S7 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_7/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_7/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_7/a_summary.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_7/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_7/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_7/b_contingency.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_7/b_stats.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_7/c_1.png",
+        f"{PLOTS_DIR}/Sup_Figure_7/c_1.svg",
+        f"{PLOTS_DIR}/Sup_Figure_7/c_2.png",
+        f"{PLOTS_DIR}/Sup_Figure_7/c_2.svg",
+        f"{PLOTS_DIR}/Sup_Figure_7/d.png",
+        f"{PLOTS_DIR}/Sup_Figure_7/d.svg"
+
+# Figure S8
+rule Sup_Figure_4_2a_guide_abundance_vs_cells_all_guides:
+    """Same as Figure 4a, but retaining all guides including the Figure 4 outlier control"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_8/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_8/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/guide_abundance_vs_cells.py --output-dir {PLOTS_DIR}/Sup_Figure_8 --panel-letter a --include-all-guides --skip-table --highlight-guide INTERGENIC-3
+        """
+
+rule Sup_Figure_4_2b_guide_abundance_vs_clones_all_guides:
+    """Same as Figure 4b, but retaining all guides including the Figure 4 outlier control"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_8/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_8/b.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/guide_abundance_vs_clones.py --output-dir {PLOTS_DIR}/Sup_Figure_8 --panel-letter b --include-all-guides --skip-table --highlight-guide INTERGENIC-3
+        """
+
+rule Sup_Figure_4_2c_cell_based_proportion_heatmap_all_guides:
+    """Same as Figure 4c, but retaining all guides including the Figure 4 outlier control"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_8/c.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_8/c.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/cell_based_proportion_heatmap.py --output-dir {PLOTS_DIR}/Sup_Figure_8 --panel-letter c --include-all-guides --highlight-guide INTERGENIC-3
+        """
+
+rule Sup_Figure_4_2d_clone_based_proportion_heatmap_all_guides:
+    """Same as Figure 4d, but retaining all guides including the Figure 4 outlier control"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_8/d.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_8/d.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/clone_based_proportion_heatmap.py --output-dir {PLOTS_DIR}/Sup_Figure_8 --panel-letter d --include-all-guides --highlight-guide INTERGENIC-3
+        """
+
+rule Sup_Figure_4_2:
+    """Generate Figure S8 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_8/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_8/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_8/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_8/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_8/c.png",
+        f"{PLOTS_DIR}/Sup_Figure_8/c.svg",
+        f"{PLOTS_DIR}/Sup_Figure_8/d.png",
+        f"{PLOTS_DIR}/Sup_Figure_8/d.svg"
+
+# Figure S9
+rule Sup_Figure_4_3a_clonal_model_diagnostics_all_perturbations:
+    """Figure 4g-style diagnostics for all modeled non-NT perturbations in the gene10 dataset"""
+    input:
+        ecdf=expand(
+            "../clonal_analysis/intermediate_files/gene10/{perturbation}/lowest_loss_points_best_{perturbation}_ecdf.png",
+            perturbation=[
+                "Bach2",
+                "Ifngr1",
+                "Ifngr2",
+                "Il18r1",
+                "Jak2",
+                "Jak3",
+                "Prdm1",
+                "Setdb1",
+                "Tnfrsf1b",
+                "Trim28",
+            ],
+        ),
+        isotonic=expand(
+            "../clonal_analysis/intermediate_files/gene10/{perturbation}/lowest_loss_points_best_{perturbation}_isotonic.png",
+            perturbation=[
+                "Bach2",
+                "Ifngr1",
+                "Ifngr2",
+                "Il18r1",
+                "Jak2",
+                "Jak3",
+                "Prdm1",
+                "Setdb1",
+                "Tnfrsf1b",
+                "Trim28",
+            ],
+        ),
+        params=expand(
+            "../clonal_analysis/intermediate_files/gene10/{perturbation}/lowest_loss_points_best_{perturbation}_parameters.txt",
+            perturbation=[
+                "Bach2",
+                "Ifngr1",
+                "Ifngr2",
+                "Il18r1",
+                "Jak2",
+                "Jak3",
+                "Prdm1",
+                "Setdb1",
+                "Tnfrsf1b",
+                "Trim28",
+            ],
+        )
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_9/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_9/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_3a_clonal_model_diagnostics.py
+        """
+
+rule Sup_Figure_4_3b_loss_bar_plot:
+    """Loss per modeled non-NT perturbation in the gene10 dataset"""
+    input:
+        params=expand(
+            "../clonal_analysis/intermediate_files/gene10/{perturbation}/lowest_loss_points_best_{perturbation}_parameters.txt",
+            perturbation=[
+                "Bach2",
+                "Ifngr1",
+                "Ifngr2",
+                "Il18r1",
+                "Jak2",
+                "Jak3",
+                "Prdm1",
+                "Setdb1",
+                "Tnfrsf1b",
+                "Trim28",
+            ],
+        )
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_9/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_9/b.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_3b_loss_bar_plot.py
+        """
+
+rule Sup_Figure_4_3:
+    """Generate Figure S9 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_9/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_9/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_9/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_9/b.svg"
+
+# deprecated internal Sup_Figure_4_4
+rule Sup_Figure_4_4a_progenitor_side_cell_counts:
+    """Figure 4a-style plot using Progenitor + Progenitor Cycling cell counts"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4_4/a_experimental.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4_4/a_experimental.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_4_state_subset_abundance.py --output-dir {PLOTS_DIR}/Sup_Figure_4_4 --panel-letter a_experimental --analysis-type cells --state-group progenitor_side
+        """
+
+rule Sup_Figure_4_4b_differentiated_cell_counts:
+    """Figure 4a-style plot using differentiated cell counts"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4_4/b_experimental.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4_4/b_experimental.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_4_state_subset_abundance.py --output-dir {PLOTS_DIR}/Sup_Figure_4_4 --panel-letter b_experimental --analysis-type cells --state-group differentiated
+        """
+
+rule Sup_Figure_4_4c_progenitor_side_clone_counts:
+    """Figure 4b-style plot using clones with progenitor-side cells"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4_4/c_experimental.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4_4/c_experimental.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_4_state_subset_abundance.py --output-dir {PLOTS_DIR}/Sup_Figure_4_4 --panel-letter c_experimental --analysis-type clones --state-group progenitor_side
+        """
+
+rule Sup_Figure_4_4d_differentiated_clone_counts:
+    """Figure 4b-style plot using clones with differentiated cells"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4_4/d_experimental.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4_4/d_experimental.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig4_4_state_subset_abundance.py --output-dir {PLOTS_DIR}/Sup_Figure_4_4 --panel-letter d_experimental --analysis-type clones --state-group differentiated
+        """
+
+rule Sup_Figure_4_4e_state_cell_abundance_heatmap:
+    """Per-state Figure 4a-style cell abundance tests"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig4_4_state_abundance_heatmap.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4_4/e_experimental.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4_4/e_experimental.svg",
+        stats=f"{PLOTS_DIR}/Sup_Figure_4_4/e_experimental_stats.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} --output-dir {PLOTS_DIR}/Sup_Figure_4_4 --panel-letter e_experimental --analysis-type cells
+        """
+
+rule Sup_Figure_4_4f_state_clone_abundance_heatmap:
+    """Per-state Figure 4b-style clone abundance tests"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig4_4_state_abundance_heatmap.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4_4/f_experimental.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4_4/f_experimental.svg",
+        stats=f"{PLOTS_DIR}/Sup_Figure_4_4/f_experimental_stats.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} --output-dir {PLOTS_DIR}/Sup_Figure_4_4 --panel-letter f_experimental --analysis-type clones
+        """
+
+rule Sup_Figure_4_4g_grouped_state_cell_abundance_heatmap:
+    """Grouped-state Figure 4a-style cell abundance tests"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig4_4_state_abundance_heatmap.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4_4/g_experimental.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4_4/g_experimental.svg",
+        stats=f"{PLOTS_DIR}/Sup_Figure_4_4/g_experimental_stats.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} --output-dir {PLOTS_DIR}/Sup_Figure_4_4 --panel-letter g_experimental --analysis-type cells --state-mode grouped
+        """
+
+rule Sup_Figure_4_4h_grouped_state_clone_abundance_heatmap:
+    """Grouped-state Figure 4b-style clone abundance tests"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig4_4_state_abundance_heatmap.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_4_4/h_experimental.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_4_4/h_experimental.svg",
+        stats=f"{PLOTS_DIR}/Sup_Figure_4_4/h_experimental_stats.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} --output-dir {PLOTS_DIR}/Sup_Figure_4_4 --panel-letter h_experimental --analysis-type clones --state-mode grouped
+        """
+
+rule Sup_Figure_4_4:
+    """Generate deprecated internal Sup_Figure_4_4 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_4_4/a_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/a_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/b_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/b_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/c_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/c_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/d_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/d_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/e_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/e_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/e_experimental_stats.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/f_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/f_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/f_experimental_stats.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/g_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/g_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/g_experimental_stats.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/h_experimental.png",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/h_experimental.svg",
+        f"{PLOTS_DIR}/Sup_Figure_4_4/h_experimental_stats.tsv"
+
+# =============================================================================
+# FIGURE 5: Perturb-seq Dataset of Trim28 and Setdb1
+# =============================================================================
+
+rule Figure5c_umap_cell_type_and_perturbation:
+    """UMAP plots showing cell types and Trim28/Setdb1 perturbations"""
+    output:
+        png_left=f"{PLOTS_DIR}/Figure5/c_left.png",
+        svg_left=f"{PLOTS_DIR}/Figure5/c_left.svg",
+        png_right_umap=f"{PLOTS_DIR}/Figure5/c_right_umap.png",
+        svg_right_umap=f"{PLOTS_DIR}/Figure5/c_right_umap.svg",
+        png_right_legend=f"{PLOTS_DIR}/Figure5/c_right_legend.png",
+        svg_right_legend=f"{PLOTS_DIR}/Figure5/c_right_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/umap_cell_type_and_perturbation.py
+        """
+
+rule Figure5d_trim28_setdb1_marker_dotplot:
+    """Cell type marker dotplot for trim28_setdb1 dataset (all cells and control-only)"""
+    output:
+        png=f"{PLOTS_DIR}/Figure5/d.png",
+        svg=f"{PLOTS_DIR}/Figure5/d.svg",
+        png_control=f"{PLOTS_DIR}/Figure5/d_control.png",
+        svg_control=f"{PLOTS_DIR}/Figure5/d_control.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_marker_dotplot.py
+        """
+
+rule Figure5e_umap_cell_cycle:
+    """UMAP visualization colored by cell cycle phase for trim28_setdb1 dataset"""
+    output:
+        png=f"{PLOTS_DIR}/Figure5/e.png",
+        svg=f"{PLOTS_DIR}/Figure5/e.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/umap_trim28_setdb1_cell_cycle.py
+        """
+
+rule Figure5_legend:
+    """Standalone cell type legend for trim28_setdb1 dataset"""
+    output:
+        png=f"{PLOTS_DIR}/Figure5/legend.png",
+        svg=f"{PLOTS_DIR}/Figure5/legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_legend_standalone.py --output-dir {PLOTS_DIR}/Figure5 --stem legend
+        """
+
+rule Figure5g_perturbation_proportions_trim28_setdb1:
+    """Stacked bar chart of perturbation proportions by cell type (NG excluded; Setdb1+Trim28 shown in cornflowerblue)"""
+    output:
+        png=f"{PLOTS_DIR}/Figure5/g.png",
+        svg=f"{PLOTS_DIR}/Figure5/g.svg",
+        png_legend=f"{PLOTS_DIR}/Figure5/g_legend.png",
+        svg_legend=f"{PLOTS_DIR}/Figure5/g_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/perturbation_proportions_trim28_setdb1.py
+        """
+
+rule Sup_Figure_5_3_perturbation_proportions_trim28_setdb1:
+    """Supplementary stacked bar chart of perturbation proportions by cell type for trim28_setdb1 dataset"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_3_old/3.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_3_old/3.svg",
+        png_legend=f"{PLOTS_DIR}/Sup_Figure_5_3_old/3_legend.png",
+        svg_legend=f"{PLOTS_DIR}/Sup_Figure_5_3_old/3_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/perturbation_proportions_trim28_setdb1.py
+        """
+
+rule Sup_Figure_5_2a_expression_umaps:
+    """Internal marker-gene UMAP source for the Trim28-Setdb1 dataset"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_11_source/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_11_source/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_2_expression_umaps.py
+        """
+
+rule Sup_Figure_5_2b_control_marker_dotplot:
+    """Control-only version of the Figure 5d marker dotplot for Figure S11a"""
+    input:
+        png=f"{PLOTS_DIR}/Figure5/d_control.png",
+        svg=f"{PLOTS_DIR}/Figure5/d_control.svg"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_11/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_11/a.svg"
+    shell:
+        """
+        mkdir -p {PLOTS_DIR}/Sup_Figure_11
+        cp {input.png} {output.png}
+        cp {input.svg} {output.svg}
+        """
+
+rule Sup_Figure_5_4_clone_proportion_heatmap_guides:
+    """Guide-level clone-based cell type proportion heatmap for trim28_setdb1 dataset"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_4_old/4.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_4_old/4.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_clone_proportion_heatmap_guides.py
+        """
+
+rule Sup_Figure_5_5_cell_proportion_heatmap_guides:
+    """Guide-level cell-based cell type proportion heatmap for trim28_setdb1 dataset"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_5_old/5.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_5_old/5.svg",
+        tables=f"{PLOTS_DIR}/Sup_Figure_5_5_old/5_individual_tables/all_results.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_cell_proportion_heatmap_guides.py
+        """
+
+rule Sup_Figure_5_6_cell_type_proportions_trim28_setdb1:
+    """Guide-level cell type proportions stacked bar chart for trim28_setdb1 dataset (Figure 2f analogue)"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_6_old/6.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_6_old/6.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_cell_type_proportions_stacked_bar.py
+        """
+
+rule Sup_Figure_5_1a_guide_abundance_vs_cells:
+    """Cell-based guide abundance versus recovered cell counts for the Trim28/Setdb1 dataset"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig5_1a_guide_abundance_vs_cells.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_10/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_10/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_1a_guide_abundance_vs_cells.py
+        """
+
+rule Sup_Figure_5_1b_clone_size_histograms:
+    """Pooled NT-versus-Trim28 and NT-versus-Setdb1 clone-size histograms"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig5_1b_clone_size_histograms.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_10/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_10/b.svg",
+        tests=f"{PLOTS_DIR}/Sup_Figure_10/b_clone_size_tests.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_1b_clone_size_histograms.py
+        """
+
+rule Sup_Figure_5_3a_clonal_model_diagnostics:
+    """Figure 4g-style clonal-model diagnostics for NT, Trim28, and Setdb1 in the Trim28-Setdb1 dataset"""
+    input:
+        ecdf=expand(
+            "../clonal_analysis/intermediate_files/trim28_setdb1/{perturbation}/lowest_loss_points_best_{perturbation}_ecdf.png",
+            perturbation=["NT", "Trim28", "Setdb1"],
+        ),
+        isotonic=expand(
+            "../clonal_analysis/intermediate_files/trim28_setdb1/{perturbation}/lowest_loss_points_best_{perturbation}_isotonic.png",
+            perturbation=["NT", "Trim28", "Setdb1"],
+        ),
+        params=expand(
+            "../clonal_analysis/intermediate_files/trim28_setdb1/{perturbation}/lowest_loss_points_best_{perturbation}_parameters.txt",
+            perturbation=["NT", "Trim28", "Setdb1"],
+        )
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_12/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_12/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_1d_clonal_model_diagnostics.py --output-dir {PLOTS_DIR}/Sup_Figure_12 --stem a --layout row
+        """
+
+rule Sup_Figure_5_3b_lowest_loss_projection:
+    """3D projection of the 100 lowest-loss NT and Trim28 parameter sets (Figure 4f analogue)"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig5_1e_lowest_loss_projections.py",
+        nt="../clonal_analysis/intermediate_files/trim28_setdb1/NT/grid_search_loss.npz",
+        trim28="../clonal_analysis/intermediate_files/trim28_setdb1/Trim28/grid_search_loss.npz"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_12/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_12/b.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_1e_lowest_loss_projections.py --mode projection --output-dir {PLOTS_DIR}/Sup_Figure_12 --projection-stem b
+        """
+
+rule Sup_Figure_5_3c_lowest_loss_projection_views:
+    """Orthogonal 2D projections of the 100 lowest-loss NT and Trim28 parameter sets (Figure 4h analogue)"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig5_1e_lowest_loss_projections.py",
+        nt="../clonal_analysis/intermediate_files/trim28_setdb1/NT/grid_search_loss.npz",
+        trim28="../clonal_analysis/intermediate_files/trim28_setdb1/Trim28/grid_search_loss.npz"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_12/c.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_12/c.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_1e_lowest_loss_projections.py --mode views --output-dir {PLOTS_DIR}/Sup_Figure_12 --views-stem c
+        """
+
+rule Sup_Figure_5_1g_perturbation_proportions_with_no_guide:
+    """Same as Figure 5g, but including cells with no detected guide as a separate dark-gray category"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/a.svg",
+        png_legend=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/a_legend.png",
+        svg_legend=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/a_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/perturbation_proportions_trim28_setdb1.py
+        """
+
+rule Sup_Figure_5_1h_cell_type_proportions_by_guide:
+    """Guide-level cell type proportions for trim28_setdb1 ordered by NO_SITE, Setdb1, and Trim28"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/b.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_1h_cell_type_proportions_by_guide.py
+        """
+
+rule Sup_Figure_5_4c_trim28_clone_distribution:
+    """Figure 3b-style ordered clone compositions for expanded Trim28 clones in the Trim28-Setdb1 dataset"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig5_2d_trim28_clone_distribution.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/c.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/c.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_2d_trim28_clone_distribution.py
+        """
+
+rule Sup_Figure_5_4c_legend:
+    """Standalone cell type legend for the Trim28 clone-composition source panel"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_setdb1_legend_standalone.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/c_legend.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/c_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_legend_standalone.py --output-dir {PLOTS_DIR}/Sup_Figure_11_shared_source --stem c_legend
+        """
+
+rule Sup_Figure_5_4d_trim28_normalized_isotonic:
+    """Figure 3f-style normalized isotonic fits for Trim28 clones in the Trim28-Setdb1 dataset"""
+    input:
+        script=f"{SCRIPTS_DIR}/sup_fig5_2e_trim28_normalized_isotonic.py"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/d.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/d.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_2e_trim28_normalized_isotonic.py --png {output.png} --svg {output.svg}
+        """
+
+rule Sup_Figure_5_4e_trm_like_signature_by_guide:
+    """Guide-level TRM-like signature scores for the Trim28-Setdb1 dataset"""
+    input:
+        table="supplementary_tables/5_2.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/e.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/e.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_trm_like_signature_by_guide.py \
+            --signature-table {input.table} \
+            --png-path {output.png} \
+            --svg-path {output.svg}
+        """
+
+rule Sup_Figure_5_4f_trim28_vs_setdb1_log2fc_correlation:
+    """Two-panel correlation of Trim28-vs-NT and Setdb1-vs-NT log2FC within each experiment"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/f.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/f.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_dual_log2fc_correlation.py \
+            --combined-png {output.png} \
+            --combined-svg {output.svg}
+        """
+
+rule Sup_Figure_5_1:
+    """Generate Figure S10 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_10/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_10/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_10/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_10/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_10/b_clone_size_tests.tsv"
+
+rule Sup_Figure_5_2:
+    """Generate internal Figure S11 source UMAP panel and public Figure S11a"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_11_source/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_11_source/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_11/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/a.svg"
+
+rule Sup_Figure_11_shared_panels:
+    """Copy shared Trim28/Setdb1 source panels into the public Figure S11 folder."""
+    input:
+        b_png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/a.png",
+        b_svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/a.svg",
+        b_legend_png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/a_legend.png",
+        b_legend_svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/a_legend.svg",
+        c_png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/b.png",
+        c_svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/b.svg",
+        d_png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/c.png",
+        d_svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/c.svg",
+        d_legend_png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/c_legend.png",
+        d_legend_svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/c_legend.svg",
+        e_png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/d.png",
+        e_svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/d.svg",
+        f_png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/e.png",
+        f_svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/e.svg",
+        g_png=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/f.png",
+        g_svg=f"{PLOTS_DIR}/Sup_Figure_11_shared_source/f.svg"
+    output:
+        b_png=f"{PLOTS_DIR}/Sup_Figure_11/b.png",
+        b_svg=f"{PLOTS_DIR}/Sup_Figure_11/b.svg",
+        b_legend_png=f"{PLOTS_DIR}/Sup_Figure_11/b_legend.png",
+        b_legend_svg=f"{PLOTS_DIR}/Sup_Figure_11/b_legend.svg",
+        c_png=f"{PLOTS_DIR}/Sup_Figure_11/c.png",
+        c_svg=f"{PLOTS_DIR}/Sup_Figure_11/c.svg",
+        d_png=f"{PLOTS_DIR}/Sup_Figure_11/d.png",
+        d_svg=f"{PLOTS_DIR}/Sup_Figure_11/d.svg",
+        d_legend_png=f"{PLOTS_DIR}/Sup_Figure_11/d_legend.png",
+        d_legend_svg=f"{PLOTS_DIR}/Sup_Figure_11/d_legend.svg",
+        e_png=f"{PLOTS_DIR}/Sup_Figure_11/e.png",
+        e_svg=f"{PLOTS_DIR}/Sup_Figure_11/e.svg",
+        f_png=f"{PLOTS_DIR}/Sup_Figure_11/f.png",
+        f_svg=f"{PLOTS_DIR}/Sup_Figure_11/f.svg",
+        g_png=f"{PLOTS_DIR}/Sup_Figure_11/g.png",
+        g_svg=f"{PLOTS_DIR}/Sup_Figure_11/g.svg"
+    shell:
+        """
+        mkdir -p {PLOTS_DIR}/Sup_Figure_11
+        cp {input.b_png} {output.b_png}
+        cp {input.b_svg} {output.b_svg}
+        cp {input.b_legend_png} {output.b_legend_png}
+        cp {input.b_legend_svg} {output.b_legend_svg}
+        cp {input.c_png} {output.c_png}
+        cp {input.c_svg} {output.c_svg}
+        cp {input.d_png} {output.d_png}
+        cp {input.d_svg} {output.d_svg}
+        cp {input.d_legend_png} {output.d_legend_png}
+        cp {input.d_legend_svg} {output.d_legend_svg}
+        cp {input.e_png} {output.e_png}
+        cp {input.e_svg} {output.e_svg}
+        cp {input.f_png} {output.f_png}
+        cp {input.f_svg} {output.f_svg}
+        cp {input.g_png} {output.g_png}
+        cp {input.g_svg} {output.g_svg}
+        """
+
+rule Sup_Figure_11:
+    """Generate public Figure S11 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_11/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_11/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_11/b_legend.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/b_legend.svg",
+        f"{PLOTS_DIR}/Sup_Figure_11/c.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/c.svg",
+        f"{PLOTS_DIR}/Sup_Figure_11/d.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/d.svg",
+        f"{PLOTS_DIR}/Sup_Figure_11/d_legend.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/d_legend.svg",
+        f"{PLOTS_DIR}/Sup_Figure_11/e.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/e.svg",
+        f"{PLOTS_DIR}/Sup_Figure_11/f.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/f.svg",
+        f"{PLOTS_DIR}/Sup_Figure_11/g.png",
+        f"{PLOTS_DIR}/Sup_Figure_11/g.svg"
+
+rule Sup_Figure_5_3:
+    """Generate Figure S12 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_12/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_12/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_12/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_12/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_12/c.png",
+        f"{PLOTS_DIR}/Sup_Figure_12/c.svg"
+
+rule Figure5j_trm_like_clone_proportions:
+    """Stacked bar chart showing TRM-like cells by clone for trim28_setdb1 dataset"""
+    input:
+        script=f"{SCRIPTS_DIR}/trm_like_clone_proportions_trim28_setdb1.py",
+        figure_format="../scripts/utils/figure_format.py"
+    output:
+        png=f"{PLOTS_DIR}/Figure5/j.png",
+        svg=f"{PLOTS_DIR}/Figure5/j.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trm_like_clone_proportions_trim28_setdb1.py
+        """
+
+rule Figure5l_gene_expression_correlation_trm_like:
+    """Gene expression correlation plot between TRM-like vs Others in both experiments"""
+    output:
+        png=f"{PLOTS_DIR}/Figure5/l.png",
+        svg=f"{PLOTS_DIR}/Figure5/l.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/gene_expression_correlation_trm_like.py
+        """
+
+rule Figure5m_top_trm_like_distance_gene10:
+    """TRM-like distance analysis for 10 gene perturb-seq dataset"""
+    input:
+        script=f"{SCRIPTS_DIR}/trm_like_distance_gene10.py",
+        figure_format="../scripts/utils/figure_format.py"
+    output:
+        png=f"{PLOTS_DIR}/Figure5/m_top.png",
+        svg=f"{PLOTS_DIR}/Figure5/m_top.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trm_like_distance_gene10.py
+        """
+
+rule Figure5m_bottom_trm_like_distance_trim28_setdb1:
+    """TRM-like distance analysis for Trim28 Setdb1 perturb-seq dataset"""
+    input:
+        script=f"{SCRIPTS_DIR}/trm_like_distance_trim28_setdb1.py",
+        figure_format="../scripts/utils/figure_format.py"
+    output:
+        png=f"{PLOTS_DIR}/Figure5/m_bottom.png",
+        svg=f"{PLOTS_DIR}/Figure5/m_bottom.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trm_like_distance_trim28_setdb1.py
+        """
+
+rule Figure5i_trim28_setdb1_clone_proportion_heatmap:
+    """Clone-based cell type proportion heatmap for trim28_setdb1 dataset using Wilcoxon rank-sum tests"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_setdb1_clone_proportion_heatmap.py",
+        figure_format="../scripts/utils/figure_format.py"
+    output:
+        png=f"{PLOTS_DIR}/Figure5/i.png",
+        svg=f"{PLOTS_DIR}/Figure5/i.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_clone_proportion_heatmap.py
+        """
+
+rule Figure5h_trim28_setdb1_cell_proportion_heatmap:
+    """Cell-based cell type proportion heatmap for trim28_setdb1 dataset using Fisher exact tests"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_setdb1_cell_proportion_heatmap.py",
+        figure_format="../scripts/utils/figure_format.py"
+    output:
+        png=f"{PLOTS_DIR}/Figure5/h.png",
+        svg=f"{PLOTS_DIR}/Figure5/h.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_cell_proportion_heatmap.py
+        """
+
+rule Figure5k_trim28_trm_clone_bar_plot:
+    """Bar plot of non-TRM-like cell types in high-TRM Trim28 clones"""
+    output:
+        png=f"{PLOTS_DIR}/Figure5/k.png",
+        svg=f"{PLOTS_DIR}/Figure5/k.svg",
+        png_v2=f"{PLOTS_DIR}/Figure5/k_v2.png",
+        svg_v2=f"{PLOTS_DIR}/Figure5/k_v2.svg",
+        png_v3=f"{PLOTS_DIR}/Figure5/k_v3.png",
+        svg_v3=f"{PLOTS_DIR}/Figure5/k_v3.svg",
+        png_v4=f"{PLOTS_DIR}/Figure5/k_v4.png",
+        svg_v4=f"{PLOTS_DIR}/Figure5/k_v4.svg",
+        png_v5=f"{PLOTS_DIR}/Figure5/k_v5.png",
+        svg_v5=f"{PLOTS_DIR}/Figure5/k_v5.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_trm_clone_bar_plot.py
+        """
+
+rule Figure5b_trim28_guide_abundance_vs_clones:
+    """Scatter plot of initial guide abundance vs number of clones for Trim28/Setdb1 dataset"""
+    output:
+        png=f"{PLOTS_DIR}/Figure5/b.png",
+        svg=f"{PLOTS_DIR}/Figure5/b.svg",
+        table="supplementary_tables/5_1.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_guide_abundance_vs_clones.py
+        """
+
+rule Figure5b_trim28_guide_abundance_legend:
+    """Standalone perturbation legend for Figure 5b guide-abundance scatter"""
+    output:
+        png=f"{PLOTS_DIR}/Figure5/b_legend.png",
+        svg=f"{PLOTS_DIR}/Figure5/b_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_guide_abundance_legend.py
+        """
+
+rule Figure5f_trim28_setdb1_parameter_boxplot:
+    """Boxplot of clonal modeling parameters for Trim28 vs NT"""
+    output:
+        png=f"{PLOTS_DIR}/Figure5/f.png",
+        svg=f"{PLOTS_DIR}/Figure5/f.svg",
+        png_legend=f"{PLOTS_DIR}/Figure5/f_legend.png",
+        svg_legend=f"{PLOTS_DIR}/Figure5/f_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_parameter_boxplot.py
+        """
+
+rule Sup_Figure_5_1_gene_expression_correlation_trim28:
+    """Gene expression correlation plot between Trim28 vs NT in both experiments"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_1_old/1.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_1_old/1.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/gene_expression_correlation_trim28.py
+        """
+
+rule Sup_Figure_5b_gene_expression_correlation_setdb1:
+    """Gene expression correlation plot between Setdb1 vs NT in both experiments (legacy internal Setdb1 correlation panel)"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_2_old/2.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_2_old/2.svg",
+        png_v2=f"{PLOTS_DIR}/Sup_Figure_5_2_old/2_v2.png",
+        svg_v2=f"{PLOTS_DIR}/Sup_Figure_5_2_old/2_v2.svg",
+        png_v3=f"{PLOTS_DIR}/Sup_Figure_5_2_old/2_v3.png",
+        svg_v3=f"{PLOTS_DIR}/Sup_Figure_5_2_old/2_v3.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/gene_expression_correlation_setdb1.py
+        """
+
+# =============================================================================
+# FIGURE 6: Multiomic single-cell RNA + ATAC analysis
+# =============================================================================
+
+rule Figure6a_multiome_rna_umap_cell_type:
+    """Multiome RNA UMAP clustering colored by cell type and Trim28 perturbation"""
+    output:
+        png_left=f"{PLOTS_DIR}/Figure6/a_left.png",
+        svg_left=f"{PLOTS_DIR}/Figure6/a_left.svg",
+        png_left_legend=f"{PLOTS_DIR}/Figure6/a_left_legend.png",
+        svg_left_legend=f"{PLOTS_DIR}/Figure6/a_left_legend.svg",
+        png_right_umap=f"{PLOTS_DIR}/Figure6/a_right_umap.png",
+        svg_right_umap=f"{PLOTS_DIR}/Figure6/a_right_umap.svg",
+        png_right_legend=f"{PLOTS_DIR}/Figure6/a_right_legend.png",
+        svg_right_legend=f"{PLOTS_DIR}/Figure6/a_right_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/multiome_rna_umap_cell_type.py
+        """
+
+rule Figure6b_scrna_dotplot_markers:
+    """scRNA dot plot with cell markers (all cells and control-only)"""
+    output:
+        png=f"{PLOTS_DIR}/Figure6/b.png",
+        svg=f"{PLOTS_DIR}/Figure6/b.svg",
+        png_control=f"{PLOTS_DIR}/Figure6/b_control.png",
+        svg_control=f"{PLOTS_DIR}/Figure6/b_control.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/scrna_dotplot_markers.py
+        """
+
+rule Figure6c_trm_signature_analysis:
+    """TRM-like signature UMAP and violin plots"""
+    output:
+        png_umap=f"{PLOTS_DIR}/Figure6/c_umap.png",
+        svg_umap=f"{PLOTS_DIR}/Figure6/c_umap.svg",
+        png_violin=f"{PLOTS_DIR}/Figure6/c_violin.png",
+        svg_violin=f"{PLOTS_DIR}/Figure6/c_violin.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trm_signature_analysis.py
+        """
+
+rule Figure6d_trm_atac_rna_scatter:
+    """Scatter plot relating ATAC and RNA changes in TRM-like cells"""
+    output:
+        png=f"{PLOTS_DIR}/Figure6/d.png",
+        svg=f"{PLOTS_DIR}/Figure6/d.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trm_atac_rna_scatter.py
+        """
+
+rule Figure6d_atac_rna_scatter_legend:
+    """Standalone legend for ATAC vs RNA scatter plot (Figure 6d)"""
+    output:
+        png=f"{PLOTS_DIR}/Figure6/d_legend.png",
+        svg=f"{PLOTS_DIR}/Figure6/d_legend.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/atac_rna_scatter_legend.py
+        """
+
+rule Figure6e_nars2_locus_bigwig:
+    """Nars2 locus plot in the standard Control-versus-TRM-like format with highlighted DE peak"""
+    output:
+        png=f"{PLOTS_DIR}/Figure6/e.png",
+        svg=f"{PLOTS_DIR}/Figure6/e.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/nars2_locus_bigwig_plot_v2.py
+        """
+
+rule Figure6f_repeat_fraction_histograms:
+    """Histograms of repeat element fraction for ATAC and RNA"""
+    output:
+        png_atac=f"{PLOTS_DIR}/Figure6/f_atac.png",
+        svg_atac=f"{PLOTS_DIR}/Figure6/f_atac.svg",
+        png_rna=f"{PLOTS_DIR}/Figure6/f_rna.png",
+        svg_rna=f"{PLOTS_DIR}/Figure6/f_rna.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/repeat_fraction_histograms.py
+        """
+
+rule Figure6g_repeat_element_scatter:
+    """Scatter plot of repeat elements log2FC (ATAC vs RNA)"""
+    output:
+        png=f"{PLOTS_DIR}/Figure6/g.png",
+        svg=f"{PLOTS_DIR}/Figure6/g.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/repeat_rna_vs_atac_correlation.py
+        """
+
+rule Figure6_all_panels:
+    """Generate all Figure 6 panels"""
+    input:
+        # Panel a (left UMAP, left legend, right UMAP, and right legend)
+        f"{PLOTS_DIR}/Figure6/a_left.png",
+        f"{PLOTS_DIR}/Figure6/a_left_legend.png",
+        f"{PLOTS_DIR}/Figure6/a_right_umap.png",
+        f"{PLOTS_DIR}/Figure6/a_right_legend.png",
+        # Panel b
+        f"{PLOTS_DIR}/Figure6/b.png",
+        # Panel c
+        f"{PLOTS_DIR}/Figure6/c_umap.png",
+        f"{PLOTS_DIR}/Figure6/c_violin.png",
+        # Panel d - TRM-like ATAC/RNA scatter
+        f"{PLOTS_DIR}/Figure6/d.png",
+        # Legend for panel d
+        f"{PLOTS_DIR}/Figure6/d_legend.png",
+        # Panel e
+        f"{PLOTS_DIR}/Figure6/e.png",
+        # Panel f (ATAC and RNA histograms)
+        f"{PLOTS_DIR}/Figure6/f_atac.png",
+        f"{PLOTS_DIR}/Figure6/f_rna.png",
+        # Panel g
+        f"{PLOTS_DIR}/Figure6/g.png"
+
+rule Sup_Figure_6_1a_expression_umaps:
+    """Marker-gene UMAP table for the multiome RNA dataset (Figure S13a)"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_13/a.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_13/a.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig6_1_expression_umaps.py
+        """
+
+rule Sup_Figure_6_1b_control_marker_dotplot:
+    """Control-only marker dotplot for the multiome RNA dataset excluding the TRM-like state (Figure S13b)"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_13/b.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_13/b.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig6_1_control_marker_dotplot.py
+        """
+
+rule Sup_Figure_6_1c_cell_type_enrichment_heatmap:
+    """RNA- and ATAC-PCA distances from Trim28 TRM-like cells in the multiome RNA dataset (Figure S13c)"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_13/c.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_13/c.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig6_1d_trm_like_pca_distances.py
+        """
+
+rule Sup_Figure_6_1d_trm_like_pca_distances:
+    """Trim28-versus-Control cell-type enrichment heatmap for the multiome RNA dataset (Figure S13d)"""
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_13/d.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_13/d.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig6_1c_cell_type_enrichment_heatmap.py
+        """
+
+rule Sup_Figure_6_1:
+    """Generate Figure S13 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_13/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_13/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_13/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_13/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_13/c.png",
+        f"{PLOTS_DIR}/Sup_Figure_13/c.svg",
+        f"{PLOTS_DIR}/Sup_Figure_13/d.png",
+        f"{PLOTS_DIR}/Sup_Figure_13/d.svg"
+
+rule Sup_Figure_6_2ab_significant_locus_examples:
+    """Itga1 and Setdb1 locus examples anchored on significant Figure 6d ATAC peaks (Figure S14a,b)"""
+    output:
+        png_a=f"{PLOTS_DIR}/Sup_Figure_14/a.png",
+        svg_a=f"{PLOTS_DIR}/Sup_Figure_14/a.svg",
+        png_b=f"{PLOTS_DIR}/Sup_Figure_14/b.png",
+        svg_b=f"{PLOTS_DIR}/Sup_Figure_14/b.svg",
+        peak_table=f"{PLOTS_DIR}/Sup_Figure_14/significant_de_peaks.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig6_2_significant_locus_examples.py
+        """
+
+rule Sup_Figure_6_2:
+    """Generate Figure S14 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_14/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_14/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_14/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_14/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_14/significant_de_peaks.tsv"
+
+rule Sup_Figure_6_3ab_count_correlation_histograms:
+    """Count-reconstruction validation histograms for randomly sampled retained genes and peaks (Figure S15a,b)"""
+    output:
+        png_a=f"{PLOTS_DIR}/Sup_Figure_15/a.png",
+        svg_a=f"{PLOTS_DIR}/Sup_Figure_15/a.svg",
+        png_b=f"{PLOTS_DIR}/Sup_Figure_15/b.png",
+        svg_b=f"{PLOTS_DIR}/Sup_Figure_15/b.svg",
+        gene_table=f"{PLOTS_DIR}/Sup_Figure_15/gene_correlations.tsv",
+        peak_table=f"{PLOTS_DIR}/Sup_Figure_15/peak_correlations.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig6_3_count_reconstruction_correlations.py
+        """
+
+rule Sup_Figure_6_3:
+    """Generate Figure S15 panels"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_15/a.png",
+        f"{PLOTS_DIR}/Sup_Figure_15/a.svg",
+        f"{PLOTS_DIR}/Sup_Figure_15/b.png",
+        f"{PLOTS_DIR}/Sup_Figure_15/b.svg",
+        f"{PLOTS_DIR}/Sup_Figure_15/gene_correlations.tsv",
+        f"{PLOTS_DIR}/Sup_Figure_15/peak_correlations.tsv"
+
+# Public supplementary figure aliases matching manuscript-facing folder names.
+rule Sup_Figure_1:
+    """Generate public Figure S1 panels"""
+    input:
+        rules.Sup_Figure_1_1.input
+
+rule Sup_Figure_2:
+    """Generate public Figure S2 panels"""
+    input:
+        rules.Sup_Figure_1_2.input
+
+rule Sup_Figure_3:
+    """Generate public Figure S3 panels"""
+    input:
+        rules.Sup_Figure_2_1.input
+
+rule Sup_Figure_4:
+    """Generate public Figure S4 panels"""
+    input:
+        rules.Sup_Figure_3_3.input
+
+rule Sup_Figure_5:
+    """Generate public Figure S5 panels"""
+    input:
+        rules.Sup_Figure_3_1.input
+
+rule Sup_Figure_6:
+    """Generate public Figure S6 panels"""
+    input:
+        rules.Sup_Figure_3_2.input
+
+rule Sup_Figure_7:
+    """Generate public Figure S7 panels"""
+    input:
+        rules.Sup_Figure_4_1.input
+
+rule Sup_Figure_8:
+    """Generate public Figure S8 panels"""
+    input:
+        rules.Sup_Figure_4_2.input
+
+rule Sup_Figure_9:
+    """Generate public Figure S9 panels"""
+    input:
+        rules.Sup_Figure_4_3.input
+
+rule Sup_Figure_10:
+    """Generate public Figure S10 panels"""
+    input:
+        rules.Sup_Figure_5_1.input
+
+rule Sup_Figure_12:
+    """Generate public Figure S12 panels"""
+    input:
+        rules.Sup_Figure_5_3.input
+
+rule Sup_Figure_13:
+    """Generate public Figure S13 panels"""
+    input:
+        rules.Sup_Figure_6_1.input
+
+rule Sup_Figure_14:
+    """Generate public Figure S14 panels"""
+    input:
+        rules.Sup_Figure_6_2.input
+
+rule Sup_Figure_15:
+    """Generate public Figure S15 panels"""
+    input:
+        rules.Sup_Figure_6_3.input
+
+rule Figure7a_tcf7_validation:
+    """Paired intracellular TCF7 staining for NT and Trim28 TILs (Figure 7a)"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_functional_validation.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7A_TCF7_validation_clean.csv"
+    output:
+        png=f"{PLOTS_DIR}/Figure7/a.png",
+        svg=f"{PLOTS_DIR}/Figure7/a.svg",
+        stats=f"{PLOTS_DIR}/Figure7/a_stats.json"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --panel a \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --output-dir {PLOTS_DIR}/Figure7
+        """
+
+rule Figure7b_competitive_recovery:
+    """Competitive recovery of Trim28 cells in dLN and tumor excluding PD1-overlap samples (Figure 7b)"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_functional_validation.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7B_competitive_recovery_excluding_pd1_overlap_clean.csv"
+    output:
+        png=f"{PLOTS_DIR}/Figure7/b.png",
+        svg=f"{PLOTS_DIR}/Figure7/b.svg",
+        stats=f"{PLOTS_DIR}/Figure7/b_stats.json"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --panel b \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --output-dir {PLOTS_DIR}/Figure7
+        """
+
+rule Figure7c_pd1_tumor_input_enrichment:
+    """Control versus anti-PD-1 tumor Trim28 % / input % enrichment (Figure 7c)"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_functional_validation.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7C_PD1_enrichment_plus_exp74_mannwhitney_clean.csv"
+    output:
+        png=f"{PLOTS_DIR}/Figure7/c.png",
+        svg=f"{PLOTS_DIR}/Figure7/c.svg",
+        stats=f"{PLOTS_DIR}/Figure7/c_stats.json"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --panel c \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --output-dir {PLOTS_DIR}/Figure7
+        """
+
+rule Figure7d_pd1_tumor_dln_enrichment:
+    """Control versus anti-PD-1 tumor/dLN Trim28 enrichment (Figure 7d)"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_functional_validation.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7C_PD1_enrichment_plus_exp74_mannwhitney_clean.csv"
+    output:
+        png=f"{PLOTS_DIR}/Figure7/d.png",
+        svg=f"{PLOTS_DIR}/Figure7/d.svg",
+        stats=f"{PLOTS_DIR}/Figure7/d_stats.json"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --panel d \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --output-dir {PLOTS_DIR}/Figure7
+        """
+
+rule Figure7d_experimental_trim28_fraction_by_tissue:
+    """Experimental raw Trim28 fraction comparison between dLN and tumor for anti-PD-1 Figure 7d samples"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_functional_validation.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7C_PD1_enrichment_plus_exp74_mannwhitney_clean.csv",
+        flow=f"{FIGURE7_CLEAN_DIR}/Fig7C_PD1_enrichment_curated_flow_clean.csv",
+        exp74=f"{FIGURE7_PARSED_DIR}/fig7bce_exp74_guide_counts_summary.csv"
+    output:
+        png=f"{PLOTS_DIR}/Figure7/d_experimental.png",
+        svg=f"{PLOTS_DIR}/Figure7/d_experimental.svg",
+        stats=f"{PLOTS_DIR}/Figure7/d_experimental_stats.json"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --panel d_experimental \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --parsed-dir {FIGURE7_PARSED_DIR} \
+            --output-dir {PLOTS_DIR}/Figure7
+        """
+
+rule Figure7e_tumor_growth_survival:
+    """Tumor growth and endpoint-free survival for no anti-PD-1 and anti-PD-1 experiments (Figure 7e)"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_functional_validation.py",
+        exp71_growth=f"{FIGURE7_CLEAN_DIR}/Fig7D_exp71_growth_no_pd1_forwardfilled_clean.csv",
+        exp71_survival=f"{FIGURE7_CLEAN_DIR}/Fig7D_exp71_survival_no_pd1_forwardfilled_clean.csv",
+        exp67_growth=f"{FIGURE7_CLEAN_DIR}/Fig7D_exp67_growth_pd1_clean.csv",
+        exp67_survival=f"{FIGURE7_CLEAN_DIR}/Fig7D_exp67_survival_pd1_clean.csv"
+    output:
+        png=f"{PLOTS_DIR}/Figure7/e.png",
+        svg=f"{PLOTS_DIR}/Figure7/e.svg",
+        stats=f"{PLOTS_DIR}/Figure7/e_stats.json"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --panel e \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --output-dir {PLOTS_DIR}/Figure7
+        """
+
+rule Figure7f_skin_distribution:
+    """Three-bin Trim28 output% / input% distribution across TIL, peritumor skin, and distant skin (Figure 7f)"""
+    input:
+        script=f"{SCRIPTS_DIR}/trim28_functional_validation.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7E_skin_distribution_3bin_clean.csv",
+        pairs=f"{FIGURE7_CLEAN_DIR}/Fig7E_peritumor_vs_distant_pairs.csv"
+    output:
+        png=f"{PLOTS_DIR}/Figure7/f.png",
+        svg=f"{PLOTS_DIR}/Figure7/f.svg",
+        stats=f"{PLOTS_DIR}/Figure7/f_stats.json"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --panel f \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --output-dir {PLOTS_DIR}/Figure7
+        """
+
+rule Figure7:
+    """Generate all Figure 7 panels"""
+    input:
+        f"{PLOTS_DIR}/Figure7/a.png",
+        f"{PLOTS_DIR}/Figure7/a.svg",
+        f"{PLOTS_DIR}/Figure7/a_stats.json",
+        f"{PLOTS_DIR}/Figure7/b.png",
+        f"{PLOTS_DIR}/Figure7/b.svg",
+        f"{PLOTS_DIR}/Figure7/b_stats.json",
+        f"{PLOTS_DIR}/Figure7/c.png",
+        f"{PLOTS_DIR}/Figure7/c.svg",
+        f"{PLOTS_DIR}/Figure7/c_stats.json",
+        f"{PLOTS_DIR}/Figure7/d.png",
+        f"{PLOTS_DIR}/Figure7/d.svg",
+        f"{PLOTS_DIR}/Figure7/d_stats.json",
+        f"{PLOTS_DIR}/Figure7/e.png",
+        f"{PLOTS_DIR}/Figure7/e.svg",
+        f"{PLOTS_DIR}/Figure7/e_stats.json",
+        f"{PLOTS_DIR}/Figure7/f.png",
+        f"{PLOTS_DIR}/Figure7/f.svg",
+        f"{PLOTS_DIR}/Figure7/f_stats.json"
+
+rule Sup_Figure_5_8_trim28_vs_setdb1_log2fc_correlation:
+    """Correlation of Trim28 vs NT and Setdb1 vs NT log2FC within each experiment (legacy internal Sup_Figure_5_8)"""
+    output:
+        png_gene10=f"{PLOTS_DIR}/Sup_Figure_5_8_old/8_gene10.png",
+        svg_gene10=f"{PLOTS_DIR}/Sup_Figure_5_8_old/8_gene10.svg",
+        png_trim28_setdb1=f"{PLOTS_DIR}/Sup_Figure_5_8_old/8_trim28_setdb1.png",
+        svg_trim28_setdb1=f"{PLOTS_DIR}/Sup_Figure_5_8_old/8_trim28_setdb1.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_dual_log2fc_correlation.py
+        """
+
+rule Sup_Figure_5_8_trim28_setdb1_guides:
+    """Per-guide correlation of Trim28 vs NT and Setdb1 guide vs NT log2FC (legacy internal Sup_Figure_5_8, guide panels)"""
+    output:
+        expand(f"{PLOTS_DIR}/Sup_Figure_5_8_old/8_trim28_setdb1/{{guide}}.png",
+               guide=["Setdb1-1", "Setdb1-2", "Setdb1-3", "Setdb1-4", "Setdb1-5",
+                      "Setdb1-6", "Setdb1-7", "Setdb1-8", "Setdb1-9", "Setdb1-10"]),
+        expand(f"{PLOTS_DIR}/Sup_Figure_5_8_old/8_trim28_setdb1/{{guide}}.svg",
+               guide=["Setdb1-1", "Setdb1-2", "Setdb1-3", "Setdb1-4", "Setdb1-5",
+                      "Setdb1-6", "Setdb1-7", "Setdb1-8", "Setdb1-9", "Setdb1-10"])
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_guide_log2fc_correlation.py
+        """
+
+rule Sup_Figure_5_9_trim28_setdb1_guide_correlations:
+    """Barplots of per-guide Pearson/Spearman correlations between Trim28 vs NT and Setdb1 guides vs NT (legacy internal Sup_Figure_5_9)"""
+    output:
+        pearson_png=f"{PLOTS_DIR}/Sup_Figure_5_9_old/9_pearson.png",
+        pearson_svg=f"{PLOTS_DIR}/Sup_Figure_5_9_old/9_pearson.svg",
+        spearman_png=f"{PLOTS_DIR}/Sup_Figure_5_9_old/9_spearman.png",
+        spearman_svg=f"{PLOTS_DIR}/Sup_Figure_5_9_old/9_spearman.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trim28_setdb1_guide_correlation_barplot.py
+        """
+
+rule Sup_Figure_5_10_trm_like_signature_gene10_scoring_violin:
+    """TRM-like signature scores in trim28_setdb1 using the Table S5.2 signature"""
+    input:
+        table="supplementary_tables/5_2.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_10_old/10.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_10_old/10.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_trm_like_signature_gene10_scoring_violin.py \
+            --signature-table {input.table}
+        """
+
+# Figure S101
+rule Sup_Figure_5_11_trm_like_signature_by_guide:
+    """TRM-like signature scores by guide using the Table S5.2 signature"""
+    input:
+        table="supplementary_tables/5_2.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_11_old/11.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_11_old/11.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/sup_fig5_trm_like_signature_by_guide.py \
+            --signature-table {input.table}
+        """
+
+rule Sup_Figure_5_12_trm_like_signature_dotplot_by_guide:
+    """TRM-like signature dotplot by guide using the Table S5.2 signature"""
+    input:
+        table="supplementary_tables/5_2.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_12_old/12.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_12_old/12.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trm_like_signature_dotplot_by_guide.py \
+            --signature-table {input.table}
+        """
+
+rule Sup_Figure_5_13_trm_like_signature_setdb1_minus_nt_heatmap:
+    """Heatmap of Setdb1-1 minus NT for TRM-like signature genes (clustered columns)"""
+    input:
+        table="supplementary_tables/5_2.tsv"
+    output:
+        png=f"{PLOTS_DIR}/Sup_Figure_5_13_old/13.png",
+        svg=f"{PLOTS_DIR}/Sup_Figure_5_13_old/13.svg"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trm_like_signature_setdb1_minus_nt_heatmap.py \
+            --signature-table {input.table}
+        """
+
+rule Sup_Figure_5_10_11_12_trm_like_signature_plots:
+    """Generate legacy internal TRM-like signature panels (TRM-like signature scoring)"""
+    input:
+        f"{PLOTS_DIR}/Sup_Figure_5_10_old/10.png",
+        f"{PLOTS_DIR}/Sup_Figure_5_10_old/10.svg",
+        f"{PLOTS_DIR}/Sup_Figure_5_11_old/11.png",
+        f"{PLOTS_DIR}/Sup_Figure_5_11_old/11.svg",
+        f"{PLOTS_DIR}/Sup_Figure_5_12_old/12.png",
+        f"{PLOTS_DIR}/Sup_Figure_5_12_old/12.svg",
+        f"{PLOTS_DIR}/Sup_Figure_5_13_old/13.png",
+        f"{PLOTS_DIR}/Sup_Figure_5_13_old/13.svg"
+
+# =============================================================================
+# SUPPLEMENTARY TABLES
+# =============================================================================
+
+rule Table_2_1:
+    """Generate supplementary table of differentially expressed genes per cell type (NT cells only)"""
+    output:
+        table="supplementary_tables/2_1.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/deg_per_cell_type_table.py
+        """
+
+rule Table_2_2:
+    """Generate supplementary table of GO term enrichment scores per cell type"""
+    output:
+        table="supplementary_tables/2_2.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/go_term_enrichment_table.py
+        """
+
+rule Table_2_3:
+    """Generate supplementary table of differentially expressed genes per perturbation"""
+    output:
+        table="supplementary_tables/2_3.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/deg_per_perturbation_table.py
+        """
+
+rule Table_5_2:
+    """Generate supplementary table of TRM-like signature genes significant in both experiments"""
+    output:
+        table="supplementary_tables/5_2.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/trm_like_signature_table.py
+        """
+
+rule Table_6_1:
+    """Generate supplementary table of differentially accessible peaks per multiome cell type"""
+    output:
+        table="supplementary_tables/6_1.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/da_peaks_per_cell_type_table.py
+        """
+
+rule Table_6_2:
+    """Generate supplementary table of Figure 6d differentially accessible peaks"""
+    output:
+        table="supplementary_tables/6_2.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/da_peaks_trim28_trm_like_vs_nt_table.py
+        """
+
+rule Table_6_3:
+    """Generate supplementary table of repeat-element differential accessibility and expression"""
+    output:
+        table="supplementary_tables/6_3.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/repeat_element_da_de_table.py
+        """
+
+rule Table_7_1:
+    """Generate Figure 7a TCF7 validation source-data supplementary table"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure7_supplementary_tables.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7A_TCF7_validation_clean.csv"
+    output:
+        table="supplementary_tables/7_1.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --table 7_1 \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --output {output.table}
+        """
+
+rule Table_7_2:
+    """Generate Figure 7b competitive-recovery source-data supplementary table"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure7_supplementary_tables.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7B_competitive_recovery_excluding_pd1_overlap_clean.csv",
+        source=f"{FIGURE7_PARSED_DIR}/fig7b_current_compilation_ratios.csv"
+    output:
+        table="supplementary_tables/7_2.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --table 7_2 \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --parsed-dir {FIGURE7_PARSED_DIR} \
+            --output {output.table}
+        """
+
+rule Table_7_3:
+    """Generate Figure 7c-d anti-PD-1 recovery source-data supplementary table"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure7_supplementary_tables.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7C_PD1_enrichment_plus_exp74_mannwhitney_clean.csv",
+        flow=f"{FIGURE7_CLEAN_DIR}/Fig7C_PD1_enrichment_curated_flow_clean.csv",
+        exp74=f"{FIGURE7_PARSED_DIR}/fig7bce_exp74_guide_counts_summary.csv",
+        exp74_counts=f"{FIGURE7_PARSED_DIR}/../z_drive/guide_counts2.xlsx"
+    output:
+        table="supplementary_tables/7_3.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --table 7_3 \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --parsed-dir {FIGURE7_PARSED_DIR} \
+            --output {output.table}
+        """
+
+rule Table_7_4:
+    """Generate Figure 7e tumor-growth and survival source-data supplementary table"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure7_supplementary_tables.py",
+        exp71_growth=f"{FIGURE7_CLEAN_DIR}/Fig7D_exp71_growth_no_pd1_forwardfilled_clean.csv",
+        exp71_survival=f"{FIGURE7_CLEAN_DIR}/Fig7D_exp71_survival_no_pd1_forwardfilled_clean.csv",
+        exp67_growth=f"{FIGURE7_CLEAN_DIR}/Fig7D_exp67_growth_pd1_clean.csv",
+        exp67_survival=f"{FIGURE7_CLEAN_DIR}/Fig7D_exp67_survival_pd1_clean.csv"
+    output:
+        table="supplementary_tables/7_4.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --table 7_4 \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --output {output.table}
+        """
+
+rule Table_7_5:
+    """Generate Figure 7f skin and tissue guide-count source-data supplementary table"""
+    input:
+        script=f"{SCRIPTS_DIR}/figure7_supplementary_tables.py",
+        clean=f"{FIGURE7_CLEAN_DIR}/Fig7E_skin_distribution_3bin_clean.csv",
+        pairs=f"{FIGURE7_CLEAN_DIR}/Fig7E_peritumor_vs_distant_pairs.csv",
+        exp66_exp70_counts=f"{FIGURE7_PARSED_DIR}/fig7e_exp70_exp66_skin_til_guide_counts.csv",
+        exp74_counts=f"{FIGURE7_PARSED_DIR}/../z_drive/guide_counts2.xlsx"
+    output:
+        table="supplementary_tables/7_5.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --table 7_5 \
+            --clean-dir {FIGURE7_CLEAN_DIR} \
+            --parsed-dir {FIGURE7_PARSED_DIR} \
+            --output {output.table}
+        """
+
+rule Table_M1:
+    """Generate methods supplementary guide-sequence table"""
+    input:
+        script=f"{SCRIPTS_DIR}/methods_guide_sequence_table.py",
+        tcf7_pilot="../raw_data/new_data/al-ld-053/guide_seq_info.csv",
+        in_vivo_screen_1="../raw_data/CRISPR_sort_screens/5_23_22_CP1_B16/CP1_reference.txt",
+        in_vivo_screen_2="../raw_data/CRISPR_sort_screens/7_13_22_CP3_B16/CP3_reference.txt",
+        ten_gene_perturbseq="../raw_data/new_data/exp49_CP8/guide_seq_info.csv",
+        trim28_setdb1_perturbseq="../raw_data/new_data/trim28_setdb1_data/reference_genome/guide_seq.csv",
+        trim28_validation="../Figure7_data_context_2026-05-19/01_collected_source_data/figure7_data/z_drive/reference.txt",
+        trim28_validation_two_guide="../Figure7_data_context_2026-05-19/01_collected_source_data/figure7_data/z_drive/reference_trim28.txt"
+    output:
+        table="supplementary_tables/M1.tsv"
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --tcf7-pilot {input.tcf7_pilot} \
+            --in-vivo-screen-1 {input.in_vivo_screen_1} \
+            --in-vivo-screen-2 {input.in_vivo_screen_2} \
+            --ten-gene-perturbseq {input.ten_gene_perturbseq} \
+            --trim28-setdb1-perturbseq {input.trim28_setdb1_perturbseq} \
+            --trim28-validation {input.trim28_validation} \
+            --trim28-validation-two-guide {input.trim28_validation_two_guide} \
+            --output {output.table}
+        """
+
+rule Supplementary_Tables_Excel:
+    """Build the supplementary table Excel workbook from TSV tables and captions"""
+    input:
+        script=f"{SCRIPTS_DIR}/build_supplementary_tables_excel.py",
+        captions=SUPPLEMENTARY_TABLE_CAPTIONS,
+        tables=SUPPLEMENTARY_TABLE_TSVS
+    output:
+        workbook=SUPPLEMENTARY_TABLE_EXCEL
+    shell:
+        """
+        {PYTHON_ENV} {input.script} \
+            --captions {input.captions} \
+            --output {output.workbook} \
+            {input.tables}
+        """
+
+rule Supplementary_Tables:
+    """Generate all supplementary table TSVs and the combined Excel workbook"""
+    input:
+        tables=SUPPLEMENTARY_TABLE_TSVS,
+        workbook=SUPPLEMENTARY_TABLE_EXCEL
+
+rule Figure2:
+    """Generate all Figure 2 panels."""
+    input:
+        f"{PLOTS_DIR}/Figure2/b.png",
+        f"{PLOTS_DIR}/Figure2/b.svg",
+        f"{PLOTS_DIR}/Figure2/c.png",
+        f"{PLOTS_DIR}/Figure2/c.svg",
+        f"{PLOTS_DIR}/Figure2/c_control.png",
+        f"{PLOTS_DIR}/Figure2/c_control.svg",
+        f"{PLOTS_DIR}/Figure2/d.png",
+        f"{PLOTS_DIR}/Figure2/d.svg",
+        f"{PLOTS_DIR}/Figure2/cell_cycle_legend.png",
+        f"{PLOTS_DIR}/Figure2/cell_cycle_legend.svg",
+        f"{PLOTS_DIR}/Figure2/e.png",
+        f"{PLOTS_DIR}/Figure2/e.svg",
+        f"{PLOTS_DIR}/Figure2/f.png",
+        f"{PLOTS_DIR}/Figure2/f.svg",
+        f"{PLOTS_DIR}/Figure2/g.png",
+        f"{PLOTS_DIR}/Figure2/g.svg",
+        f"{PLOTS_DIR}/Figure2/legend.png",
+        f"{PLOTS_DIR}/Figure2/legend.svg"
+
+rule Figure5:
+    """Generate all Figure 5 panels."""
+    input:
+        f"{PLOTS_DIR}/Figure5/b.png",
+        f"{PLOTS_DIR}/Figure5/b.svg",
+        f"{PLOTS_DIR}/Figure5/b_legend.png",
+        f"{PLOTS_DIR}/Figure5/b_legend.svg",
+        f"{PLOTS_DIR}/Figure5/c_left.png",
+        f"{PLOTS_DIR}/Figure5/c_left.svg",
+        f"{PLOTS_DIR}/Figure5/c_right_umap.png",
+        f"{PLOTS_DIR}/Figure5/c_right_umap.svg",
+        f"{PLOTS_DIR}/Figure5/c_right_legend.png",
+        f"{PLOTS_DIR}/Figure5/c_right_legend.svg",
+        f"{PLOTS_DIR}/Figure5/d.png",
+        f"{PLOTS_DIR}/Figure5/d.svg",
+        f"{PLOTS_DIR}/Figure5/d_control.png",
+        f"{PLOTS_DIR}/Figure5/d_control.svg",
+        f"{PLOTS_DIR}/Figure5/e.png",
+        f"{PLOTS_DIR}/Figure5/e.svg",
+        f"{PLOTS_DIR}/Figure5/legend.png",
+        f"{PLOTS_DIR}/Figure5/legend.svg",
+        f"{PLOTS_DIR}/Figure5/f.png",
+        f"{PLOTS_DIR}/Figure5/f.svg",
+        f"{PLOTS_DIR}/Figure5/f_legend.png",
+        f"{PLOTS_DIR}/Figure5/f_legend.svg",
+        f"{PLOTS_DIR}/Figure5/g.png",
+        f"{PLOTS_DIR}/Figure5/g.svg",
+        f"{PLOTS_DIR}/Figure5/g_legend.png",
+        f"{PLOTS_DIR}/Figure5/g_legend.svg",
+        f"{PLOTS_DIR}/Figure5/h.png",
+        f"{PLOTS_DIR}/Figure5/h.svg",
+        f"{PLOTS_DIR}/Figure5/i.png",
+        f"{PLOTS_DIR}/Figure5/i.svg",
+        f"{PLOTS_DIR}/Figure5/j.png",
+        f"{PLOTS_DIR}/Figure5/j.svg",
+        f"{PLOTS_DIR}/Figure5/k.png",
+        f"{PLOTS_DIR}/Figure5/k.svg",
+        f"{PLOTS_DIR}/Figure5/k_v2.png",
+        f"{PLOTS_DIR}/Figure5/k_v2.svg",
+        f"{PLOTS_DIR}/Figure5/k_v3.png",
+        f"{PLOTS_DIR}/Figure5/k_v3.svg",
+        f"{PLOTS_DIR}/Figure5/k_v4.png",
+        f"{PLOTS_DIR}/Figure5/k_v4.svg",
+        f"{PLOTS_DIR}/Figure5/k_v5.png",
+        f"{PLOTS_DIR}/Figure5/k_v5.svg",
+        f"{PLOTS_DIR}/Figure5/l.png",
+        f"{PLOTS_DIR}/Figure5/l.svg",
+        f"{PLOTS_DIR}/Figure5/m_top.png",
+        f"{PLOTS_DIR}/Figure5/m_top.svg",
+        f"{PLOTS_DIR}/Figure5/m_bottom.png",
+        f"{PLOTS_DIR}/Figure5/m_bottom.svg"
+
+rule Figure6:
+    """Generate all Figure 6 panels."""
+    input:
+        f"{PLOTS_DIR}/Figure6/a_left.png",
+        f"{PLOTS_DIR}/Figure6/a_left.svg",
+        f"{PLOTS_DIR}/Figure6/a_left_legend.png",
+        f"{PLOTS_DIR}/Figure6/a_left_legend.svg",
+        f"{PLOTS_DIR}/Figure6/a_right_umap.png",
+        f"{PLOTS_DIR}/Figure6/a_right_umap.svg",
+        f"{PLOTS_DIR}/Figure6/a_right_legend.png",
+        f"{PLOTS_DIR}/Figure6/a_right_legend.svg",
+        f"{PLOTS_DIR}/Figure6/b.png",
+        f"{PLOTS_DIR}/Figure6/b.svg",
+        f"{PLOTS_DIR}/Figure6/b_control.png",
+        f"{PLOTS_DIR}/Figure6/b_control.svg",
+        f"{PLOTS_DIR}/Figure6/c_umap.png",
+        f"{PLOTS_DIR}/Figure6/c_umap.svg",
+        f"{PLOTS_DIR}/Figure6/c_violin.png",
+        f"{PLOTS_DIR}/Figure6/c_violin.svg",
+        f"{PLOTS_DIR}/Figure6/d.png",
+        f"{PLOTS_DIR}/Figure6/d.svg",
+        f"{PLOTS_DIR}/Figure6/d_legend.png",
+        f"{PLOTS_DIR}/Figure6/d_legend.svg",
+        f"{PLOTS_DIR}/Figure6/e.png",
+        f"{PLOTS_DIR}/Figure6/e.svg",
+        f"{PLOTS_DIR}/Figure6/f_atac.png",
+        f"{PLOTS_DIR}/Figure6/f_atac.svg",
+        f"{PLOTS_DIR}/Figure6/f_rna.png",
+        f"{PLOTS_DIR}/Figure6/f_rna.svg",
+        f"{PLOTS_DIR}/Figure6/g.png",
+        f"{PLOTS_DIR}/Figure6/g.svg"
+
+rule all:
+    """Generate all manuscript figures, public supplementary figures, and supplementary tables."""
+    input:
+        rules.Figure1.input,
+        rules.Figure2.input,
+        rules.Figure3.input,
+        rules.Figure4.input,
+        rules.Figure5.input,
+        rules.Figure6.input,
+        rules.Figure7.input,
+        rules.Sup_Figure_1.input,
+        rules.Sup_Figure_2.input,
+        rules.Sup_Figure_3.input,
+        rules.Sup_Figure_4.input,
+        rules.Sup_Figure_5.input,
+        rules.Sup_Figure_6.input,
+        rules.Sup_Figure_7.input,
+        rules.Sup_Figure_8.input,
+        rules.Sup_Figure_9.input,
+        rules.Sup_Figure_10.input,
+        rules.Sup_Figure_11.input,
+        rules.Sup_Figure_12.input,
+        rules.Sup_Figure_13.input,
+        rules.Sup_Figure_14.input,
+        rules.Sup_Figure_15.input,
+        rules.Supplementary_Tables.input

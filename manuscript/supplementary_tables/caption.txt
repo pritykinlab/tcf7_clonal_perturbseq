@@ -1,0 +1,45 @@
+Table S1.1. LCMV competitive-transfer source data, related to Figure 1d. The table contains the per-mouse Figure 1d source values, including the input and output percentages used to calculate relative accumulation. SLEC and TCM rows contain phenotype percentages.
+
+Table S1.2. Intracellular Tcf7 antibody pilot screen results, related to the top plot in Figure 1e. The table includes the PoolQ average log2 fold change, average -log10(P value), per-guide log2 fold changes, selected ranked-list tail, and the ascending and descending ranks and per-guide -log10(P) scores.
+
+Table S1.3. Tcf7-GFP reporter pilot screen results, related to the bottom plot in Figure 1e. The table includes the PoolQ average log2 fold change, average -log10(P value), per-guide log2 fold changes, selected ranked-list tail, and the ascending and descending ranks and per-guide -log10(P) scores.
+
+Table S1.4. Whole-genome in vitro Tcf7 screen results, related to Figure 1f. The table includes the PoolQ average log2 fold change, average -log10(P value), per-guide log2 fold changes, selected ranked-list tail, and the ascending and descending ranks and per-guide -log10(P) scores.
+
+Table S1.5. Genome-wide in vitro CRISPR screen results for Tcf7, Prdm1, Eomes, and Tox high-versus-low comparisons across acute and chronic stimulation conditions, related to Supplementary Figure 1.2a. The table includes the screen, PoolQ average log2 fold change, average -log10(P value), per-guide log2 fold changes, selected ranked-list tail, and the ascending and descending ranks with corresponding -log10(P) scores.
+
+Table S1.6. Guide enrichment in Tcf7-high versus Tcf7-low populations in the first in vivo screen, related to the left plot in Figure 1h. For each targeted gene, the two guide-level P values were converted to signed normal-equivalent Z-scores and combined using a signed Stouffer method to compute a combined gene-level Z-score. From the gene-level Z-score, we computed a two-sided P value and Benjamini-Hochberg adjusted P value. The table also includes the individual guide signed Z-scores and P values.
+
+Table S1.7. Guide enrichment in Tcf7-high versus Tcf7-low populations in the second in vivo screen, related to the right plot in Figure 1h. For each targeted gene, the two guide-level P values were converted to signed normal-equivalent Z-scores and combined using a signed Stouffer method to compute a combined gene-level Z-score. From the gene-level Z-score, we computed a two-sided P value and Benjamini-Hochberg adjusted P value. The table also includes the individual guide signed Z-scores and P values.
+
+Table S2.1. Cell type marker genes, related to Figure 2. Results from differential expression analysis comparing each cell type against all other cell types using all cells in the dataset. Only genes with adjusted p-value < 0.05 are shown, sorted by cell type and then by descending log2FC. Includes log2 fold change, p-values, adjusted p-values, and rank-sum statistics.
+
+Table S2.2. GO term enrichment scores per cell type, related to Figure 2e. Mean GO term scores calculated using control-normalized z-scores for each cell type. Includes statistical significance from Mann-Whitney U tests with Benjamini-Hochberg correction for multiple testing. Only GO terms with adjusted p-value < 0.05 are shown.
+
+Table S2.3. Differentially expressed genes per perturbation, related to Figure 2g. Results from differential expression analysis comparing each perturbation against non-targeting control cells. Only genes with adjusted p-value < 0.05 are shown, sorted by perturbation and then by descending log2FC. Includes log2 fold change, p-values, adjusted p-values (Benjamini-Hochberg corrected), and Wilcoxon rank-sum statistics.
+
+Table S4.1. Guide representation analysis (cells), related to Figure 4a. Statistical analysis of the relationship between initial guide abundance in the library and the number of cells recovered with each guide. Includes Z-scores, p-values, and Benjamini-Hochberg adjusted p-values to identify guides with significantly altered representation.
+
+Table S4.2. Guide representation analysis (clones), related to Figure 4b. Statistical analysis of the relationship between initial guide abundance in the library and the number of unique clones recovered with each guide. Includes Z-scores, p-values, and Benjamini-Hochberg adjusted p-values to identify guides with significantly altered representation.
+
+Table S5.1. Guide representation analysis (Trim28/Setdb1 screen), related to Figure 5b. Statistical analysis of the relationship between initial guide abundance in the library and the number of unique clones recovered with each guide in the targeted Trim28/Setdb1 perturbation experiment. Includes Z-scores, p-values, and Benjamini-Hochberg adjusted p-values to identify guides with significantly altered representation.
+
+Table S5.2. TRM-like signature genes, related to Figure 5l. Genes with Benjamini-Hochberg adjusted P < 0.05 and log2 fold change > 1 in both the 10-gene Perturb-seq and Trim28/Setdb1 Perturb-seq experiments for the Trim28 TRM-like versus NT other cell types comparison. Includes log2 fold change, Wilcoxon rank-sum statistics, p-values, and Benjamini-Hochberg adjusted p-values for each experiment.
+
+Table S6.1. Differentially accessible peaks per cell type, related to Figure 6a,b. Results from differential accessibility analysis comparing each multiome ATAC cell type against all other cells in the dataset. Only peaks with adjusted p-value < 0.05 are shown, sorted by cell type and then by descending log2FC. Includes peak coordinates, nearest-gene annotations, log2 fold change, p-values, adjusted p-values, and Wilcoxon rank-sum statistics.
+
+Table S6.2. Differentially accessible peaks in Trim28 TRM-like cells versus NT other cell types, related to Figure 6d. Results from differential accessibility analysis comparing Trim28 TRM-like multiome ATAC cells against Control non-TRM cells. Only peaks with adjusted p-value < 0.05 are shown, listed in descending log2FC order. Includes peak coordinates, nearest-gene annotations, log2 fold change, p-values, adjusted p-values, and Wilcoxon rank-sum statistics.
+
+Table S6.3. Differential accessibility and differential expression of repeat elements, related to Figure 6g. Results from paired RNA and ATAC differential testing of repeat elements comparing Trim28 TRM-like cells against Control non-TRM cells. Only repeat elements with adjusted p-value < 0.05 in RNA or ATAC are shown. Includes RNA and ATAC log2 fold changes, p-values, adjusted p-values, and Wilcoxon rank-sum statistics.
+
+Table S7.1. TCF7 validation source data, related to Figure 7a. The table contains paired flow-cytometry intracellular TCF7 staining measurements for NT and Trim28-gRNA donor TILs after competitive transfer. Includes experiment and sample identifiers and NT and Trim28 TCF7-positive percentages.
+
+Table S7.2. Competitive recovery by tissue source data, related to Figure 7b. The table contains one row per draining lymph node or tumor recovery value from flow cytometry after competitive transfer. Includes NT and Trim28 output percentages, input percentages, and Trim28 recovery values normalized to the input fraction of Trim28-deficient cells.
+
+Table S7.3. Anti-PD-1 competitive recovery source data, related to Figure 7c,d. The table contains tumor/input Trim28 enrichment and tumor/dLN Trim28 ratio values for control and anti-PD-1 samples. Includes treatment labels, measurement method, flow-cytometry percentages, and gRNA counts with derived percentages for gRNA-sequencing rows.
+
+Table S7.4. Tumor growth and endpoint-free survival source data, related to Figure 7e. The table contains longitudinal tumor-volume measurements and endpoint-free survival records for mice receiving NT or Trim28-gRNA OT1 T cells in the isotype/no anti-PD-1-documented and anti-PD-1-treated experiments.
+
+Table S7.5. Skin and tissue guide-count recovery source data, related to Figure 7f. The table contains gRNA-sequencing source values for TIL, peritumor skin, and distant skin samples from paired mice. Samples lacking an available input denominator were excluded. Includes NT and Trim28 gRNA counts, derived fractions, input counts where available, input Trim28 fractions, and output/input-normalized Trim28 recovery values.
+
+Table M1. Custom guide sequence reference table. The table contains sgRNA identifiers, target genes, guide classes, and 5' to 3' sequences for the Tcf7 pilot in vitro CRISPR, the two in vivo Tcf7 sort-screen, the 10-gene Perturb-seq, the Trim28/Setdb1 Perturb-seq, and Trim28 validation libraries.

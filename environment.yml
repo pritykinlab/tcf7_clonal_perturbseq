@@ -1,0 +1,62 @@
+name: main_scanpy
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Python version
+  - python=3.10
+
+  # Core single-cell analysis packages
+  - scanpy
+  - anndata
+  - python-igraph
+  - leidenalg
+
+  # Scientific computing
+  - numpy
+  - pandas
+  - scipy
+
+  # Machine learning
+  - scikit-learn
+  - statsmodels
+
+  # Visualization
+  - matplotlib
+  - seaborn
+
+  # Bioinformatics tools
+  - pysam
+
+  # Data storage and I/O
+  - h5py
+  - pytables
+
+  # Utilities
+  - tqdm
+  - ipython
+  - jupyter
+  - jupyterlab
+  - notebook
+
+  # Additional dependencies for compatibility
+  - xlrd  # For reading Excel files
+  - openpyxl  # For writing Excel files
+  - adjusttext  # For adjusting text labels in plots
+
+  # Development tools (optional but useful)
+  - ipykernel
+  - nb_conda_kernels
+
+  # For parallel processing
+  - joblib
+
+  # Additional plotting tools
+  - plotly
+
+  # pip dependencies (some packages only available via pip)
+  - pip
+  - pip:
+    - markdown
+    - openai

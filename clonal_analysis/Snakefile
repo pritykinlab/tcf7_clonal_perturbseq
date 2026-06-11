@@ -1,0 +1,438 @@
+"""
+Snakefile for computing loss landscapes and generating interactive visualizations.
+This workflow computes loss landscapes for NT and Bach2 datasets and creates
+interactive 3D surface plots with slider bars.
+"""
+
+# Configuration
+SCRIPTS_DIR = "scripts"
+OUTPUT_DIR = "intermediate_files"
+REAL_DATA_DIR = f"{OUTPUT_DIR}/real_data"
+PYTHON_ENV = "/opt/conda/envs/main_scanpy/bin/python3"
+GENE10_ADATA = "../data/gene10/preprocessing/final.h5ad"
+TRIM28_SETDB1_ADATA = "../data/trim28_setdb1/preprocessing/final.h5ad"
+
+GENE10_PERTURBATIONS = [
+    "NT",
+    "Bach2",
+    "Ifngr1",
+    "Ifngr2",
+    "Il18r1",
+    "Jak2",
+    "Jak3",
+    "Prdm1",
+    "Setdb1",
+    "Tnfrsf1b",
+    "Trim28",
+]
+GENE10_PLOT_PERTURBATIONS = ["NT", "Bach2"]
+TRIM28_PERTURBATIONS = ["NT", "Trim28", "Setdb1"]
+TRIM28_PLOT_PERTURBATIONS = ["NT", "Trim28"]
+
+
+# Data computation rules
+rule export_clone_counts_gene10:
+    """Build clone count inputs from gene10 AnnData."""
+    input:
+        adata=GENE10_ADATA
+    output:
+        expand(f"{REAL_DATA_DIR}/gene10/input/{{perturbation}}.csv", perturbation=GENE10_PERTURBATIONS)
+    params:
+        perturbations=",".join(GENE10_PERTURBATIONS),
+        output_dir=f"{REAL_DATA_DIR}/gene10/input"
+    shell:
+        """
+        mkdir -p {params.output_dir}
+        {PYTHON_ENV} {SCRIPTS_DIR}/export_clone_counts_from_adata.py \
+            --dataset gene10 \
+            --adata {input.adata} \
+            --output-dir {params.output_dir} \
+            --perturbations {params.perturbations}
+        """
+
+rule export_clone_counts_trim28_setdb1:
+    """Build clone count inputs from trim28_setdb1 AnnData."""
+    input:
+        adata=TRIM28_SETDB1_ADATA
+    output:
+        expand(f"{REAL_DATA_DIR}/trim28_setdb1/input/{{perturbation}}.csv", perturbation=TRIM28_PERTURBATIONS)
+    params:
+        perturbations=",".join(TRIM28_PERTURBATIONS),
+        output_dir=f"{REAL_DATA_DIR}/trim28_setdb1/input"
+    shell:
+        """
+        mkdir -p {params.output_dir}
+        {PYTHON_ENV} {SCRIPTS_DIR}/export_clone_counts_from_adata.py \
+            --dataset trim28_setdb1 \
+            --adata {input.adata} \
+            --output-dir {params.output_dir} \
+            --perturbations {params.perturbations}
+        """
+
+rule compute_loss_landscape_gene10:
+    """Compute loss landscapes for all gene10 perturbations."""
+    input:
+        real_data=f"{REAL_DATA_DIR}/gene10/input/{{perturbation}}.csv"
+    output:
+        f"{OUTPUT_DIR}/gene10/{{perturbation}}/grid_search_loss.npz"
+    params:
+        dataset_key=lambda wildcards: f"gene10_{wildcards.perturbation}"
+    wildcard_constraints:
+        perturbation="|".join(GENE10_PERTURBATIONS)
+    shell:
+        """
+        mkdir -p {OUTPUT_DIR}/gene10/{wildcards.perturbation}
+        {PYTHON_ENV} {SCRIPTS_DIR}/compute_loss_landscape.py \
+            --dataset {params.dataset_key} \
+            --output {output} \
+            --mean-divisions 5 \
+            --subsample-fraction 0.15
+        """
+
+rule compute_loss_landscape_trim28_setdb1:
+    """Compute loss landscapes for Trim28/Setdb1 perturbations"""
+    input:
+        real_data=f"{REAL_DATA_DIR}/trim28_setdb1/input/{{perturbation}}.csv"
+    output:
+        f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/grid_search_loss.npz"
+    params:
+        dataset_key=lambda wildcards: f"trim28_setdb1_{wildcards.perturbation}"
+    wildcard_constraints:
+        perturbation="|".join(TRIM28_PERTURBATIONS)
+    shell:
+        """
+        mkdir -p {OUTPUT_DIR}/trim28_setdb1/{wildcards.perturbation}
+        {PYTHON_ENV} {SCRIPTS_DIR}/compute_loss_landscape.py \
+            --dataset {params.dataset_key} \
+            --output {output} \
+            --mean-divisions 5 \
+            --subsample-fraction 0.1
+        """
+
+# Combined visualization rule with dynamically calculated lines
+rule plot_lowest_loss_points_3d:
+    """Generate interactive 3D plot showing lowest loss points from both NT and Bach2 with dynamically calculated best-fit lines using 100 CPUs"""
+    input:
+        nt_data=f"{OUTPUT_DIR}/gene10/NT/grid_search_loss.npz",
+        bach2_data=f"{OUTPUT_DIR}/gene10/Bach2/grid_search_loss.npz"
+    output:
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_3d.html"
+    shell:
+        """
+        mkdir -p {OUTPUT_DIR}/gene10
+        {PYTHON_ENV} {SCRIPTS_DIR}/plot_lowest_loss_points_3d.py \
+            --nt-data {input.nt_data} \
+            --bach2-data {input.bach2_data} \
+            --output {output} \
+            --n-points 1000 \
+            --n-cpus 100
+        """
+
+rule plot_lowest_loss_points_3d_trim28_setdb1:
+    """Generate interactive 3D plot for Trim28 experiment perturbations"""
+    input:
+        nt_data=f"{OUTPUT_DIR}/trim28_setdb1/NT/grid_search_loss.npz",
+        trim28_data=f"{OUTPUT_DIR}/trim28_setdb1/Trim28/grid_search_loss.npz"
+    output:
+        f"{OUTPUT_DIR}/trim28_setdb1/lowest_loss_points_3d.html"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/plot_lowest_loss_points_3d_multi.py \
+            --output {output} \
+            --n-points 1000 \
+            --n-cpus 100 \
+            --subset-min 5 \
+            --subset-step 5 \
+            --dataset NT_trim28_setdb1={input.nt_data} \
+            --dataset Trim28={input.trim28_data}
+        """
+
+rule plot_lowest_loss_points_multi_view_gene10:
+    """Generate non-interactive multi-view plot for gene10 perturbations"""
+    input:
+        nt_data=f"{OUTPUT_DIR}/gene10/NT/grid_search_loss.npz",
+        bach2_data=f"{OUTPUT_DIR}/gene10/Bach2/grid_search_loss.npz"
+    output:
+        png=f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view.png",
+        projections=f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view_projections.png",
+        txt=f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view_equations.txt"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/plot_lowest_loss_points_multi_view.py \
+            --dataset NT={input.nt_data} \
+            --dataset Bach2={input.bach2_data} \
+            --output-prefix {OUTPUT_DIR}/gene10/lowest_loss_points_multi_view \
+            --n-points 100 \
+            --highlight NT
+        """
+
+rule plot_lowest_loss_points_multi_view_gene10_legend:
+    """Generate standalone legend for the gene10 multi-view projections"""
+    input:
+        nt_data=f"{OUTPUT_DIR}/gene10/NT/grid_search_loss.npz",
+        bach2_data=f"{OUTPUT_DIR}/gene10/Bach2/grid_search_loss.npz"
+    output:
+        png=f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view_projections_legend.png",
+        svg=f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view_projections_legend.svg"
+    params:
+        output_prefix=f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view_projections_legend"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/plot_lowest_loss_points_legend.py \
+            --dataset NT={input.nt_data} \
+            --dataset Bach2={input.bach2_data} \
+            --output-prefix {params.output_prefix} \
+            --n-points 100 \
+            --highlight NT
+        """
+
+rule plot_lowest_loss_nt_diagnostics:
+    """Generate ECDF and isotonic regression diagnostics for the best NT parameters"""
+    input:
+        nt_data=f"{OUTPUT_DIR}/gene10/NT/grid_search_loss.npz",
+        real_data=f"{REAL_DATA_DIR}/gene10/input/NT.csv"
+    output:
+        ecdf_png=f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_ecdf.png",
+        ecdf_svg=f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_ecdf.svg",
+        iso_png=f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_isotonic.png",
+        iso_svg=f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_isotonic.svg",
+        params=f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_parameters.txt"
+    params:
+        output_prefix=f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt",
+        mean_divisions=5.0,
+        subsample_fraction=0.15
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/plot_lowest_loss_nt_diagnostics.py \
+            --grid {input.nt_data} \
+            --label NT \
+            --real-data {input.real_data} \
+            --output-prefix {params.output_prefix} \
+            --mean-divisions {params.mean_divisions} \
+            --subsample-fraction {params.subsample_fraction}
+        """
+
+rule plot_lowest_loss_gene10_diagnostics:
+    """Generate ECDF and isotonic diagnostics for all gene10 perturbations."""
+    input:
+        grid=f"{OUTPUT_DIR}/gene10/{{perturbation}}/grid_search_loss.npz",
+        real_data=f"{REAL_DATA_DIR}/gene10/input/{{perturbation}}.csv"
+    wildcard_constraints:
+        perturbation="|".join(GENE10_PERTURBATIONS)
+    output:
+        ecdf_png=f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.png",
+        ecdf_svg=f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.svg",
+        iso_png=f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.png",
+        iso_svg=f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.svg",
+        params=f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_parameters.txt"
+    params:
+        output_prefix=f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}",
+        mean_divisions=5.0,
+        subsample_fraction=0.15
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/plot_lowest_loss_nt_diagnostics.py \
+            --grid {input.grid} \
+            --label {wildcards.perturbation} \
+            --real-data {input.real_data} \
+            --output-prefix {params.output_prefix} \
+            --mean-divisions {params.mean_divisions} \
+            --subsample-fraction {params.subsample_fraction}
+        """
+
+rule plot_lowest_loss_points_multi_view_trim28_setdb1:
+    """Generate non-interactive multi-view plot for trim28 experiment perturbations"""
+    input:
+        nt_data=f"{OUTPUT_DIR}/trim28_setdb1/NT/grid_search_loss.npz",
+        trim28_data=f"{OUTPUT_DIR}/trim28_setdb1/Trim28/grid_search_loss.npz"
+    output:
+        png=f"{OUTPUT_DIR}/trim28_setdb1/lowest_loss_points_multi_view.png",
+        projections=f"{OUTPUT_DIR}/trim28_setdb1/lowest_loss_points_multi_view_projections.png",
+        txt=f"{OUTPUT_DIR}/trim28_setdb1/lowest_loss_points_multi_view_equations.txt"
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/plot_lowest_loss_points_multi_view.py \
+            --dataset NT={input.nt_data} \
+            --dataset Trim28={input.trim28_data} \
+            --output-prefix {OUTPUT_DIR}/trim28_setdb1/lowest_loss_points_multi_view \
+            --n-points 100 \
+            --skip-highlight
+        """
+
+rule plot_lowest_loss_trim28_setdb1_diagnostics:
+    """Generate ECDF and isotonic diagnostics for trim28_setdb1 perturbations"""
+    input:
+        grid=f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/grid_search_loss.npz",
+        real_data=f"{REAL_DATA_DIR}/trim28_setdb1/input/{{perturbation}}.csv"
+    wildcard_constraints:
+        perturbation="|".join(TRIM28_PERTURBATIONS)
+    output:
+        ecdf_png=f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.png",
+        ecdf_svg=f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.svg",
+        iso_png=f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.png",
+        iso_svg=f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.svg",
+        params=f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_parameters.txt"
+    params:
+        output_prefix=f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}",
+        mean_divisions=5.0,
+        subsample_fraction=0.1
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/plot_lowest_loss_nt_diagnostics.py \
+            --grid {input.grid} \
+            --label {wildcards.perturbation} \
+            --real-data {input.real_data} \
+            --output-prefix {params.output_prefix} \
+            --mean-divisions {params.mean_divisions} \
+            --subsample-fraction {params.subsample_fraction}
+        """
+
+rule bar_plot_parameters_gene10:
+    """Generate bar plot comparing permissible parameter ranges for gene10 perturbations"""
+    input:
+        expand(f"{OUTPUT_DIR}/gene10/{{perturbation}}/grid_search_loss.npz", perturbation=GENE10_PERTURBATIONS)
+    output:
+        f"{OUTPUT_DIR}/gene10/parameter_ranges_bar_plot.png"
+    params:
+        dataset_args=" ".join(
+            [
+                f"--dataset {perturbation}={OUTPUT_DIR}/gene10/{perturbation}/grid_search_loss.npz"
+                for perturbation in GENE10_PERTURBATIONS
+            ]
+        )
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/bar_plot_parameters.py \
+            {params.dataset_args} \
+            --output {output} \
+            --n-points 50
+        """
+
+rule bar_plot_parameters_trim28_setdb1:
+    """Generate bar plot comparing permissible parameter ranges for trim28_setdb1 perturbations"""
+    input:
+        expand(f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/grid_search_loss.npz", perturbation=TRIM28_PERTURBATIONS)
+    output:
+        f"{OUTPUT_DIR}/trim28_setdb1/parameter_ranges_bar_plot.png"
+    params:
+        dataset_args=" ".join(
+            [
+                f"--dataset {perturbation}={OUTPUT_DIR}/trim28_setdb1/{perturbation}/grid_search_loss.npz"
+                for perturbation in TRIM28_PERTURBATIONS
+            ]
+        )
+    shell:
+        """
+        {PYTHON_ENV} {SCRIPTS_DIR}/bar_plot_parameters.py \
+            {params.dataset_args} \
+            --output {output} \
+            --n-points 50
+        """
+
+# Master rule to generate all plots
+rule gene10_plots:
+    """Generate all gene10 visualization plots"""
+    input:
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_3d.html",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view.png",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view_projections.png",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view_equations.txt",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view_projections_legend.png",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_multi_view_projections_legend.svg",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_ecdf.png",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_ecdf.svg",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_isotonic.png",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_isotonic.svg",
+        f"{OUTPUT_DIR}/gene10/lowest_loss_points_best_nt_parameters.txt",
+        f"{OUTPUT_DIR}/gene10/parameter_ranges_bar_plot.png"
+
+rule trim28_setdb1_plots:
+    """Generate all trim28 experiment visualization plots"""
+    input:
+        f"{OUTPUT_DIR}/trim28_setdb1/lowest_loss_points_3d.html",
+        f"{OUTPUT_DIR}/trim28_setdb1/lowest_loss_points_multi_view.png",
+        f"{OUTPUT_DIR}/trim28_setdb1/lowest_loss_points_multi_view_projections.png",
+        f"{OUTPUT_DIR}/trim28_setdb1/lowest_loss_points_multi_view_equations.txt",
+        f"{OUTPUT_DIR}/trim28_setdb1/parameter_ranges_bar_plot.png",
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.png",
+            perturbation=TRIM28_PLOT_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.svg",
+            perturbation=TRIM28_PLOT_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.png",
+            perturbation=TRIM28_PLOT_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.svg",
+            perturbation=TRIM28_PLOT_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_parameters.txt",
+            perturbation=TRIM28_PLOT_PERTURBATIONS,
+        )
+
+rule gene10_all_perturbation_diagnostics:
+    """Generate grid searches and diagnostics for all gene10 perturbations."""
+    input:
+        expand(
+            f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.png",
+            perturbation=GENE10_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.svg",
+            perturbation=GENE10_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.png",
+            perturbation=GENE10_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.svg",
+            perturbation=GENE10_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/gene10/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_parameters.txt",
+            perturbation=GENE10_PERTURBATIONS,
+        ),
+        f"{OUTPUT_DIR}/gene10/parameter_ranges_bar_plot.png"
+
+rule trim28_setdb1_all_perturbation_diagnostics:
+    """Generate grid searches and diagnostics for all trim28_setdb1 perturbations."""
+    input:
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.png",
+            perturbation=TRIM28_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_ecdf.svg",
+            perturbation=TRIM28_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.png",
+            perturbation=TRIM28_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_isotonic.svg",
+            perturbation=TRIM28_PERTURBATIONS,
+        ),
+        expand(
+            f"{OUTPUT_DIR}/trim28_setdb1/{{perturbation}}/lowest_loss_points_best_{{perturbation}}_parameters.txt",
+            perturbation=TRIM28_PERTURBATIONS,
+        ),
+        f"{OUTPUT_DIR}/trim28_setdb1/parameter_ranges_bar_plot.png"
+
+rule all_perturbation_fits:
+    """Generate all clonal-model fits and diagnostics across perturbations."""
+    input:
+        rules.gene10_all_perturbation_diagnostics.input,
+        rules.trim28_setdb1_all_perturbation_diagnostics.input
+
+rule all_plots:
+    """Generate all visualization plots across datasets"""
+    input:
+        rules.gene10_plots.input,
+        rules.trim28_setdb1_plots.input

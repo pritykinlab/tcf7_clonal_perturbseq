@@ -1,0 +1,106 @@
+program	selection_order	gene	gene_function	selection_reason
+GOBP_THYMOCYTE_MIGRATION	1	Xcl1	Chemokine that recruits XCR1-positive dendritic cells.	Selected to show an active trafficking and immune communication axis.
+GOBP_THYMOCYTE_MIGRATION	2	Ccr6	Chemokine receptor that supports lymphocyte tissue trafficking.	Selected as a direct migration receptor.
+GOBP_THYMOCYTE_MIGRATION	3	Ccr7	Homing receptor that guides T cells through lymphoid tissues.	Selected as a canonical migratory receptor.
+GOBP_THYMOCYTE_MIGRATION	4	Adam8	Adhesion-associated metalloprotease linked to leukocyte motility.	Selected to capture migratory remodeling machinery.
+GOBP_THYMOCYTE_MIGRATION	5	Coro1a	Actin regulator required for lymphocyte movement and immune synapse dynamics.	Selected to represent cytoskeletal control of migration.
+GOBP_DENDRITIC_CELL_CHEMOTAXIS	1	Ccr6	Chemokine receptor that supports lymphocyte tissue trafficking.	Selected as a direct chemotactic receptor.
+GOBP_DENDRITIC_CELL_CHEMOTAXIS	2	Ccr7	Homing receptor that guides T cells through lymphoid tissues.	Selected because it gives a second clear migration receptor readout.
+GOBP_DENDRITIC_CELL_CHEMOTAXIS	3	Gpr183	Oxysterol receptor that positions immune cells within tissues.	Selected because it gives a clear tissue-positioning function.
+GOBP_DENDRITIC_CELL_CHEMOTAXIS	4	Trpm4	Cation channel that modulates calcium-dependent activation and motility.	Selected because it links signaling to migratory behavior.
+GOBP_DENDRITIC_CELL_CHEMOTAXIS	5	Slamf1	Surface receptor involved in adhesion and immune cell interactions.	Selected because it supports contact-dependent chemotactic interactions.
+GOBP_POSITIVE_REGULATION_OF_RESPONSE_TO_TUMOR_CELL	1	Xcl1	Chemokine that recruits XCR1-positive dendritic cells.	Selected because it directly links T cells to anti-tumor cross-talk.
+GOBP_POSITIVE_REGULATION_OF_RESPONSE_TO_TUMOR_CELL	2	Crtam	Adhesion receptor induced on activated cytotoxic lymphocytes.	Selected as a clear activation-dependent effector surface marker.
+GOBP_POSITIVE_REGULATION_OF_RESPONSE_TO_TUMOR_CELL	3	Cd160	Activating and inhibitory receptor on cytotoxic lymphocytes.	Selected because it marks tumor-reactive cytotoxic signaling.
+GOBP_POSITIVE_REGULATION_OF_RESPONSE_TO_TUMOR_CELL	4	Klrk1	Activating NK-like receptor NKG2D that senses stress ligands.	Selected because it gives a direct tumor-recognition function.
+GOBP_POSITIVE_REGULATION_OF_RESPONSE_TO_TUMOR_CELL	5	Cd226	Costimulatory receptor DNAM-1 that promotes cytotoxic responses.	Selected because it represents target-cell engagement.
+GOBP_POSITIVE_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_INTEGRIN	1	Ccl5	Chemokine that promotes T cell recruitment and effector positioning.	Selected because it is a strong functional readout of adhesive effector localization.
+GOBP_POSITIVE_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_INTEGRIN	2	Cd3e	TCR complex signaling subunit required for antigen receptor signaling.	Selected because integrin activation is tightly coupled to TCR signaling.
+GOBP_POSITIVE_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_INTEGRIN	3	Skap1	Adaptor that links TCR signals to LFA-1 integrin activation.	Selected as the clearest integrin-activation effector in the set.
+GOBP_POSITIVE_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_INTEGRIN	4	Cd24a	GPI-anchored surface protein that modulates adhesion and costimulation.	Selected because it is a recognizable surface adhesion modulator.
+GOBP_POSITIVE_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_INTEGRIN	5	Piezo1	Mechanosensitive ion channel that tunes T cell activation and adhesion.	Selected because it provides a mechanosensing component of adhesion control.
+GOCC_MHC_CLASS_I_PROTEIN_COMPLEX	1	H2-K1	Classical MHC-I heavy chain that presents antigenic peptides.	Selected as a direct core component of the MHC-I complex.
+GOCC_MHC_CLASS_I_PROTEIN_COMPLEX	2	B2m	Beta-2 microglobulin required for stable MHC-I surface expression.	Selected because it is essential for MHC-I assembly.
+GOCC_MHC_CLASS_I_PROTEIN_COMPLEX	3	H2-D1	Classical MHC-I heavy chain that presents antigenic peptides.	Selected as a second canonical MHC-I component.
+GOCC_MHC_CLASS_I_PROTEIN_COMPLEX	4	H2-T23	Nonclassical MHC-I molecule Qa-1 involved in immune regulation.	Selected because it broadens the block beyond only classical MHC-I genes.
+GOCC_MHC_CLASS_I_PROTEIN_COMPLEX	5	H2-Q7	Nonclassical MHC-I family member associated with antigen presentation biology.	Selected because it extends the complex to nonclassical MHC-I.
+GOCC_CYTOLYTIC_GRANULE	1	Prf1	Pore-forming cytotoxic effector released from granules.	Selected because it is the clearest cytolytic granule effector.
+GOCC_CYTOLYTIC_GRANULE	2	Gzmb	Granule serine protease that drives target-cell killing.	Selected as a canonical cytotoxic effector enzyme.
+GOCC_CYTOLYTIC_GRANULE	3	Nkg7	Granule-associated membrane protein linked to degranulation.	Selected because it marks cytotoxic granule trafficking.
+GOCC_CYTOLYTIC_GRANULE	4	Stxbp2	Vesicle fusion factor required for granule exocytosis.	Selected because it represents the granule release machinery.
+GOCC_CYTOLYTIC_GRANULE	5	Lamp1	Lysosomal and granule membrane protein exposed during degranulation.	Selected because it provides a direct granule membrane marker.
+GOMF_CCR1_CHEMOKINE_RECEPTOR_BINDING	1	Ccl5	Chemokine ligand that recruits and positions effector lymphocytes.	Selected as the dominant chemokine ligand in the set.
+GOMF_CCR1_CHEMOKINE_RECEPTOR_BINDING	2	Ccl3	Inflammatory chemokine ligand for CCR1 and related receptors.	Selected because it gives a clear inflammatory chemokine signal.
+GOMF_CCR1_CHEMOKINE_RECEPTOR_BINDING	3	Ccl4	Inflammatory chemokine released by activated cytotoxic lymphocytes.	Selected because it captures effector chemokine output.
+GOMF_CCR1_CHEMOKINE_RECEPTOR_BINDING	4	Ccl9	Chemokine ligand linked to inflammatory cell recruitment.	Selected because it broadens the ligand set beyond the major CCL3/4/5 axis.
+GOMF_CCR1_CHEMOKINE_RECEPTOR_BINDING	5	Ccl7	Inflammatory chemokine involved in leukocyte recruitment.	Selected to retain a fifth chemokine with direct receptor-binding function.
+GOBP_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_CADHERIN	1	Epcam	Epithelial cell adhesion molecule that mediates cell-cell adhesion.	Selected because it is the clearest adhesion molecule in the block.
+GOBP_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_CADHERIN	2	Flot1	Membrane raft protein that supports cell polarity and motility.	Selected because it links membrane organization to adhesion behavior.
+GOBP_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_CADHERIN	3	Adam19	Metalloprotease that can remodel adhesion-associated surface proteins.	Selected because it represents adhesion remodeling.
+GOBP_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_CADHERIN	4	Notch1	Developmental receptor with known effects on cell-cell communication.	Selected because it adds a signaling receptor that shapes adhesion programs.
+GOBP_REGULATION_OF_CELL_CELL_ADHESION_MEDIATED_BY_CADHERIN	5	Tjp1	Tight junction scaffold that anchors adhesion complexes to the cytoskeleton.	Selected because it is a direct junctional organizer.
+GOMF_CELL_ADHESION_MEDIATOR_ACTIVITY	1	Itga1	Collagen-binding integrin alpha chain associated with tissue residency.	Selected because it is the clearest functional adhesion receptor.
+GOMF_CELL_ADHESION_MEDIATOR_ACTIVITY	2	Emb	Cell-surface adhesion glycoprotein embigin.	Selected because it is a direct adhesion mediator rather than a signaling bystander.
+GOMF_CELL_ADHESION_MEDIATOR_ACTIVITY	3	Epcam	Epithelial cell adhesion molecule that mediates cell-cell adhesion.	Selected because it provides a strong TRM-like adhesion readout.
+GOMF_CELL_ADHESION_MEDIATOR_ACTIVITY	4	Itgb1	Beta-1 integrin subunit required for multiple adhesion receptors.	Selected because it anchors the block in integrin biology.
+GOMF_CELL_ADHESION_MEDIATOR_ACTIVITY	5	Cd47	Cell-surface ligand that regulates adhesion and synapse organization.	Selected because it gives a recognizable immune adhesion molecule.
+Progenitor Pritykin et al., 2021	1	Tcf7	Transcription factor TCF-1 that maintains progenitor-like CD8 T cell identity.	Selected as the defining progenitor-state regulator.
+Progenitor Pritykin et al., 2021	2	Sell	L-selectin homing receptor associated with less differentiated T cells.	Selected because it is a canonical progenitor and recirculation marker.
+Progenitor Pritykin et al., 2021	3	Ccr6	Chemokine receptor that supports lymphocyte tissue trafficking.	Selected because progenitor cells retain a migratory receptor program.
+Progenitor Pritykin et al., 2021	4	Id3	Transcriptional regulator that restrains terminal effector differentiation.	Selected because it is a classic progenitor-associated regulator.
+Progenitor Pritykin et al., 2021	5	Cxcr5	Chemokine receptor often enriched in stem-like progenitor exhausted cells.	Selected because it is a recognizable stem-like marker.
+Dysfunction Pritykin et al., 2021	1	Gzmb	Granule serine protease that drives target-cell killing.	Selected because dysfunctional effector cells retain strong cytotoxic programs.
+Dysfunction Pritykin et al., 2021	2	Serpinb9b	Granzyme inhibitor that protects cytotoxic cells from self-inflicted damage.	Selected because it functionally complements the cytotoxic effector genes.
+Dysfunction Pritykin et al., 2021	3	Havcr2	Inhibitory receptor TIM-3 associated with dysfunctional or exhausted T cells.	Selected as a canonical dysfunction marker.
+Dysfunction Pritykin et al., 2021	4	Fcrl6	Immunoglobulin superfamily receptor enriched in cytotoxic and dysfunctional lymphocytes.	Selected because it gives a clear dysfunctional surface-marker readout.
+Dysfunction Pritykin et al., 2021	5	Adgrg1	Adhesion GPCR GPR56 linked to cytotoxic and dysfunctional T cell states.	Selected because it is a recognizable receptor in dysfunctional effector cells.
+Progenitor Miller et al., 2019	1	Tcf7	Transcription factor TCF-1 that maintains progenitor-like CD8 T cell identity.	Selected as the central progenitor-state regulator.
+Progenitor Miller et al., 2019	2	Slamf6	Surface receptor enriched in stem-like and progenitor exhausted T cells.	Selected because it is a widely used progenitor-like surface marker.
+Progenitor Miller et al., 2019	3	S1pr1	Sphingosine-1-phosphate receptor controlling lymphocyte recirculation.	Selected because it links the progenitor state to trafficking competence.
+Progenitor Miller et al., 2019	4	Id3	Transcriptional regulator that restrains terminal effector differentiation.	Selected because it reinforces the less differentiated state.
+Progenitor Miller et al., 2019	5	Cxcr5	Chemokine receptor often enriched in stem-like progenitor exhausted cells.	Selected because it is an interpretable progenitor-associated homing receptor.
+Terminal Miller et al., 2019	1	Gzmc	Granule serine protease associated with terminal cytotoxic differentiation.	Selected because it is a direct terminal-effector readout.
+Terminal Miller et al., 2019	2	Gzme	Granule serine protease enriched in differentiated cytotoxic lymphocytes.	Selected because it broadens the terminal granzyme program.
+Terminal Miller et al., 2019	3	Serpinb9b	Granzyme inhibitor that protects cytotoxic cells from self-inflicted damage.	Selected because terminal cytotoxic cells need granzyme handling machinery.
+Terminal Miller et al., 2019	4	Ccr1	Inflammatory chemokine receptor associated with terminal effector trafficking.	Selected because it adds a direct terminal-effector migration receptor.
+Terminal Miller et al., 2019	5	Ltb4r1	Leukotriene B4 receptor that promotes inflammatory recruitment.	Selected because it captures inflammatory terminal-effector responsiveness.
+TRM Mackay et al., 2013	1	Itga1	Collagen-binding integrin alpha chain associated with tissue residency.	Selected as the most direct residency marker in the program.
+TRM Mackay et al., 2013	2	Inpp4b	Phosphoinositide phosphatase that tunes PI3K-AKT signaling.	Selected because it provides a signaling regulator rather than another surface marker.
+TRM Mackay et al., 2013	3	Rgs2	Regulator of G-protein signaling that dampens chemokine receptor signals.	Selected because it captures altered migratory signaling in resident cells.
+TRM Mackay et al., 2013	4	Litaf	Stress and inflammatory transcriptional regulator.	Selected because it reflects activation-adapted residency biology.
+TRM Mackay et al., 2013	5	Nr4a2	Immediate-early nuclear receptor induced by T cell activation.	Selected because it gives a clear activation-linked transcription factor.
+TRM Mackay et al., 2016	1	Cxcr6	Chemokine receptor strongly associated with tissue-resident T cell retention.	Selected as a canonical TRM homing and retention receptor.
+TRM Mackay et al., 2016	2	Cd69	Early activation marker that also blocks tissue egress.	Selected because it is a classic residency marker.
+TRM Mackay et al., 2016	3	Hilpda	Lipid and hypoxia adaptation factor.	Selected because it captures metabolic adaptation in tissue sites.
+TRM Mackay et al., 2016	4	Gadd45b	Stress-response regulator downstream of activation signaling.	Selected because it represents activation-adapted tissue persistence.
+TRM Mackay et al., 2016	5	Litaf	Stress and inflammatory transcriptional regulator.	Selected because it reinforces a tissue-adapted inflammatory program.
+TRM Milner et al., 2017	1	Itga1	Collagen-binding integrin alpha chain associated with tissue residency.	Selected as the clearest residency receptor.
+TRM Milner et al., 2017	2	Rgs10	Regulator of G-protein signaling that dampens chemokine receptor signals.	Selected because it reflects altered migratory signaling in resident cells.
+TRM Milner et al., 2017	3	Zfp36l1	RNA-binding protein that restrains activation-associated transcripts.	Selected because it adds post-transcriptional control to the TRM program.
+TRM Milner et al., 2017	4	Inpp4b	Phosphoinositide phosphatase that tunes PI3K-AKT signaling.	Selected because it gives a signaling regulator with clear function.
+TRM Milner et al., 2017	5	Cd69	Early activation marker that also blocks tissue egress.	Selected because it is a canonical residency molecule.
+TRM Crowl et al., 2022	1	Itga1	Collagen-binding integrin alpha chain associated with tissue residency.	Selected as the most direct tissue-retention marker.
+TRM Crowl et al., 2022	2	Rgs10	Regulator of G-protein signaling that dampens chemokine receptor signals.	Selected because it captures signaling rewiring in resident cells.
+TRM Crowl et al., 2022	3	Plac8	Small cysteine-rich protein associated with activated and tissue-adapted lymphocytes.	Selected because it is a recognizable TRM-associated effector-adaptation gene.
+TRM Crowl et al., 2022	4	Ifngr1	Interferon-gamma receptor chain.	Selected because it links the program to tissue inflammatory sensing.
+TRM Crowl et al., 2022	5	Dusp10	MAP kinase phosphatase that limits stress and inflammatory signaling.	Selected because it represents negative feedback control in tissue-resident cells.
+TRM Burn et al., 2026	1	Itga1	Collagen-binding integrin alpha chain associated with tissue residency.	Selected as the anchor residency marker.
+TRM Burn et al., 2026	2	Cxcr3	Inflammatory chemokine receptor involved in tissue entry.	Selected because it gives a clear trafficking function.
+TRM Burn et al., 2026	3	Cxcr6	Chemokine receptor strongly associated with tissue-resident T cell retention.	Selected because it is a canonical residency receptor.
+TRM Burn et al., 2026	4	Il7r	Interleukin-7 receptor that supports T cell survival and memory maintenance.	Selected because it captures a survival and memory axis.
+TRM Burn et al., 2026	5	Lgals3	Galectin-3 lectin involved in adhesion and tissue interactions.	Selected because it highlights cell-surface tissue interaction biology.
+TEX Burn et al., 2026	1	Tigit	Inhibitory receptor associated with T cell exhaustion.	Selected as a canonical checkpoint molecule.
+TEX Burn et al., 2026	2	Lag3	Inhibitory receptor enriched in dysfunctional and exhausted T cells.	Selected because it is a second canonical exhaustion marker.
+TEX Burn et al., 2026	3	Pdcd1	PD-1 checkpoint receptor that restrains T cell activation.	Selected because it is the defining checkpoint receptor.
+TEX Burn et al., 2026	4	Tox	Transcription factor that helps establish the exhausted T cell program.	Selected because it gives a direct exhaustion-state regulator.
+TEX Burn et al., 2026	5	Rgs1	Regulator of G-protein signaling enriched in activated and exhausted T cells.	Selected because it is a recurrent exhaustion-associated marker in tumor-infiltrating T cells.
+TRM/TR-TEX Park et al., 2026	1	Itga1	Collagen-binding integrin alpha chain associated with tissue residency.	Selected because the shared program still includes a strong residency receptor.
+TRM/TR-TEX Park et al., 2026	2	Sesn3	Stress-response protein that regulates mTOR and reactive oxygen species pathways.	Selected because it adds a clear stress-adaptation function.
+TRM/TR-TEX Park et al., 2026	3	Inpp4b	Phosphoinositide phosphatase that tunes PI3K-AKT signaling.	Selected because it provides a clear signaling regulator.
+TRM/TR-TEX Park et al., 2026	4	Plac8	Small cysteine-rich protein associated with activated and tissue-adapted lymphocytes.	Selected because it is a recognizable tissue-adaptation gene.
+TRM/TR-TEX Park et al., 2026	5	Id2	Transcriptional regulator that promotes effector and resident differentiation.	Selected because it gives a direct differentiation regulator.
+TRM Park et al., 2026	1	Itga1	Collagen-binding integrin alpha chain associated with tissue residency.	Selected as the anchor residency marker.
+TRM Park et al., 2026	2	Rgs10	Regulator of G-protein signaling that dampens chemokine receptor signals.	Selected because it captures altered migratory signaling in resident cells.
+TRM Park et al., 2026	3	Sesn3	Stress-response protein that regulates mTOR and reactive oxygen species pathways.	Selected because it adds a clear stress-adaptation axis.
+TRM Park et al., 2026	4	Inpp4b	Phosphoinositide phosphatase that tunes PI3K-AKT signaling.	Selected because it represents signaling control rather than another marker receptor.
+TRM Park et al., 2026	5	Id2	Transcriptional regulator that promotes effector and resident differentiation.	Selected because it provides a direct differentiation regulator.

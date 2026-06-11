@@ -1,0 +1,20 @@
+# Paths are interpreted relative to the repository root unless absolute.
+data:
+  gene10_adata: data/gene10/preprocessing/final.h5ad
+  trim28_setdb1_adata: data/trim28_setdb1/preprocessing/final.h5ad
+  comp_screen1_adata: data/comp_screen1/final.h5ad
+  multiome_rna_adata: data/multiome/analysis_using_atlas_v2/rna_final.h5ad
+  multiome_atac_adata: data/multiome/analysis_using_atlas_v2/atac_final.h5ad
+  gene10_guide_concentration: data/guide_concentration/gene10.csv
+  trim28_setdb1_guide_concentration: data/guide_concentration/trim28_setdb1.csv
+  raw_data_dir: raw_data
+  gcloud_dir: gcloud
+  figure1_handoff_dir: Figure1_data_handoff
+  figure7_context_dir: Figure7_data_context_2026-05-19
+
+outputs:
+  clonal_intermediate_dir: clonal_analysis/intermediate_files
+  manuscript_plot_dir: manuscript/plots
+  manuscript_derived_dir: manuscript/derived
+  supplementary_table_dir: manuscript/supplementary_tables
+  notebook_execution_dir: results/notebooks

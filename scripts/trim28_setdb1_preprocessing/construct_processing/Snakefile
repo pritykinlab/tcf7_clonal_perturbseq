@@ -1,0 +1,157 @@
+import os
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# Define all the variables
+base_folder = str(REPO_ROOT / "raw_data/new_data/trim28_setdb1_data")
+fastq_folder = os.path.join(base_folder, "fastq_merged")
+results_folder = os.path.join(base_folder, "results")
+reference_folder = os.path.join(base_folder, "reference_genome")
+
+umi_tools = os.environ.get("UMI_TOOLS", "umi_tools")
+STAR = os.environ.get("STAR", "STAR")
+samtools = os.environ.get("SAMTOOLS", "samtools")
+pycashier = os.environ.get("PYCASHIER", "pycashier")
+featureCounts = os.environ.get("FEATURECOUNTS", "featureCounts")
+
+
+# Rule all
+rule all:
+    input:
+        expand(os.path.join(results_folder, "alignment/{sample}/assigned_sorted.bam.bai"), sample=[
+            "lane1", "lane2", "lane3", "lane4", "lane5", "lane6", "lane7", "lane8",
+            "lane9", "lane10", "lane11", "lane12", "lane13", "lane14", "lane15", "lane16"
+        ]),
+        expand(os.path.join(results_folder, "pycashier_umi/{sample}/output/{sample}.q30.barcodes.r3d1.min3_off1.tsv"), sample=[
+            "lane1", "lane2", "lane3", "lane4", "lane5", "lane6", "lane7", "lane8",
+            "lane9", "lane10", "lane11", "lane12", "lane13", "lane14", "lane15", "lane16"
+        ])
+
+
+rule generate_whitelist:
+    input:
+        R1_file=os.path.join(fastq_folder, "{sample}_R1.fastq.gz")
+    output:
+        whitelist=os.path.join(results_folder, "umi_tools/{sample}/whitelist.txt")
+    log:
+        whitelist_log=os.path.join(results_folder, "umi_tools/{sample}/whitelist.log")
+    shell:
+        """
+        mkdir -p $(dirname {output.whitelist})
+        {umi_tools} whitelist --stdin {input.R1_file} \
+                              --bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN \
+                              --plot-prefix \
+                              --method umis \
+                              --set-cell-number 25000 \
+                              --log2stderr > {output.whitelist} \
+                              -L {log.whitelist_log} \
+                              --ed-above-threshold=discard
+        """
+
+
+rule extract_untrimmed_barcodes:
+    input:
+        R1_file=os.path.join(fastq_folder, "{sample}_R1.fastq.gz"),
+        R2_file=os.path.join(fastq_folder, "{sample}_R2.fastq.gz"),
+        whitelist=os.path.join(results_folder, "umi_tools/{sample}/whitelist.txt")
+    output:
+        R1_extracted=os.path.join(results_folder, "umi_tools/{sample}/{sample}.unmapped_untrimmed_R1_extracted.fastq.gz"),
+        R2_extracted=os.path.join(results_folder, "umi_tools/{sample}/{sample}.unmapped_untrimmed_R2_extracted.fastq.gz")
+    log:
+        extract_log=os.path.join(results_folder, "umi_tools/{sample}/extract_untrimmed.log")
+    shell:
+        """
+
+        {umi_tools} extract --bc-pattern=CCCCCCCCCCCCCCCCNNNNNNNNNN \
+                            --stdin {input.R1_file} \
+                            --stdout {output.R1_extracted} \
+                            --read2-in {input.R2_file} \
+                            --read2-out {output.R2_extracted} \
+                            --error-correct-cell \
+                            --whitelist {input.whitelist} \
+                            -L {log.extract_log}
+        """
+
+rule prepare_pycashier_input:
+    input:
+        R2_extracted=os.path.join(results_folder, "umi_tools/{sample}/{sample}.unmapped_untrimmed_R2_extracted.fastq.gz")
+    output:
+        prepared_input=os.path.join(results_folder, "pycashier_input/input/{sample}/{sample}.unmapped_untrimmed_R2_extracted.fastq")
+    shell:
+        """
+        mkdir -p {results_folder}/pycashier_input/input/{wildcards.sample}
+        cp {input.R2_extracted} {output.prepared_input}.gz
+        gzip -d {output.prepared_input}.gz
+        """
+
+rule run_pycashier:
+    input:
+        prepared_input=os.path.join(results_folder, "pycashier_input/input/{sample}/{sample}.unmapped_untrimmed_R2_extracted.fastq")
+    output:
+        os.path.join(results_folder, "pycashier_umi/{sample}/output/{sample}.q30.barcodes.r3d1.min3_off1.tsv")
+    params:
+        input_dir=os.path.join(results_folder, "pycashier_input/input/{sample}")
+    shell:
+        """
+        mkdir -p {results_folder}/pycashier_umi/{wildcards.sample}/output
+        cd {results_folder}/pycashier_umi/{wildcards.sample}/output
+
+        {pycashier} extract -y -i {params.input_dir} -o {results_folder}/pycashier_umi/{wildcards.sample}/output -t 10 -ua TGAACTTGCTA -da TAGCTCTCAAAC -d 1 -r 3 -l 6 -fc 3
+        """
+
+rule run_pycashier_guide:
+    input:
+        prepared_input=os.path.join(results_folder, "pycashier_input/input/{sample}/{sample}.unmapped_untrimmed_R2_extracted.fastq")
+    output:
+        os.path.join(results_folder, "pycashier_guide/{sample}/output/pipeline/{sample}.q30.barcode.fastq")
+    params:
+        input_dir=os.path.join(results_folder, "pycashier_input/input/{sample}")
+    shell:
+        """
+        mkdir -p {results_folder}/pycashier_guide/{wildcards.sample}/output
+        cd {results_folder}/pycashier_guide/{wildcards.sample}/output
+
+        {pycashier} extract -y -i {params.input_dir} -o {results_folder}/pycashier_guide/{wildcards.sample}/output -t 10 -ua TAGCTCTCAAAC -da CCCCATATAAG -d 1 -r 3 -l 20 -fc 3
+        """
+
+rule align_reads:
+    input:
+        R2_extracted=os.path.join(results_folder, "pycashier_guide/{sample}/output/pipeline/{sample}.q30.barcode.fastq"),
+        genomeDir=os.path.join(reference_folder, "STAR")
+    output:
+        bam=os.path.join(results_folder, "alignment/{sample}/Aligned.sortedByCoord.out.bam")
+    shell:
+        """
+        cd {results_folder}/alignment/{wildcards.sample}
+        gzip {input.R2_extracted}
+        {STAR} --runThreadN 20 \
+               --genomeDir {input.genomeDir} \
+               --readFilesIn {input.R2_extracted}.gz \
+               --outFilterMultimapNmax 1 \
+               --outSAMtype BAM SortedByCoordinate \
+               --readFilesCommand zcat \
+               --limitBAMsortRAM 41143265264
+        """
+
+rule create_feature_count_matrix:
+    input:
+        bam=os.path.join(results_folder, "alignment/{sample}/Aligned.sortedByCoord.out.bam"),
+        gtf=os.path.join(reference_folder, "annotation_barcodes.gtf")
+    output:
+        bam_sorted=os.path.join(results_folder, "alignment/{sample}/assigned_sorted.bam"),
+        bam_index=os.path.join(results_folder, "alignment/{sample}/assigned_sorted.bam.bai"),
+        count_matrix_wide=os.path.join(results_folder, "alignment/{sample}/{sample}_barcode_counts_wide_d3r2.tsv.gz"),
+        count_matrix_long=os.path.join(results_folder, "alignment/{sample}/{sample}_barcode_counts_long_d3r2.tsv.gz")
+    shell:
+        """
+        cd {results_folder}/alignment/{wildcards.sample}
+        {featureCounts} \
+            -O -T 8 -a {input.gtf} -o gene_assigned.txt -R BAM {input.bam}
+
+        {samtools} sort {input.bam}.featureCounts.bam -o {output.bam_sorted}
+        {samtools} index {output.bam_sorted}
+
+        {umi_tools} count --per-gene --gene-tag=XT --assigned-status-tag=XS --per-cell --wide-format-cell-counts -I {output.bam_sorted} -S {output.count_matrix_wide}
+        {umi_tools} count --per-gene --gene-tag=XT --assigned-status-tag=XS --per-cell -I {output.bam_sorted} -S {output.count_matrix_long}
+        """

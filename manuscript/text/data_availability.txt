@@ -1,0 +1,1 @@
+Raw and processed sequencing data generated in this study have been deposited in the Gene Expression Omnibus under accession numbers GSE334845 for bulk RNA-seq, GSE334846 for pooled bulk CRISPR screens, GSE334877 for the 10-gene Perturb-seq experiment, GSE334890 for the Trim28/Setdb1 Perturb-seq experiment, and GSE334878 for the Trim28 single-cell multiome experiment.

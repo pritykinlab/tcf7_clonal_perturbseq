@@ -1,0 +1,62 @@
+1.	Tsui, C. et al. MYB orchestrates T cell exhaustion and response to checkpoint inhibition. Nature 609, 354–360 (2022).
+2.	Miller, B. C. et al. Subsets of exhausted CD8+ T cells differentially mediate tumor control and respond to checkpoint blockade. Nat. Immunol. 20, 326–336 (2019).
+3.	Siddiqui, I. et al. Intratumoral Tcf1+PD-1+CD8+ T Cells with Stem-like Properties Promote Tumor Control in Response to Vaccination and Checkpoint Blockade Immunotherapy. Immunity 50, 195-211.e10 (2019).
+4.	Hudson, W. H. et al. Proliferating Transitory T Cells with an Effector-like Transcriptional Signature Emerge from PD-1+ Stem-like CD8+ T Cells during Chronic Infection. Immunity 51, 1043-1058.e4 (2019).
+5.	Im, S. J. et al. Defining CD8+ T cells that provide the proliferative burst after PD-1 therapy. Nature 537, 417–421 (2016).
+6.	Chen, J. H. et al. Human lung cancer harbors spatially organized stem-immunity hubs associated with response to immunotherapy. Nat. Immunol. 25, 644–658 (2024).
+7.	Sade-Feldman, M. et al. Defining T Cell States Associated with Response to Checkpoint Immunotherapy in Melanoma. Cell 175, 998-1013.e20 (2018).
+8.	Jadhav, R. R. et al. Epigenetic signature of PD-1+ TCF1+ CD8 T cells that act as resource cells during chronic viral infection and respond to PD-1 blockade. Proc. Natl. Acad. Sci. 116, 14113–14118 (2019).
+9.	Zhou, P. et al. Single-cell CRISPR screens in vivo map T cell fate regulomes in cancer. Nature 624, 154–163 (2023).
+10.	Gerlach, C. et al. Heterogeneous differentiation patterns of individual CD8+ T cells. Science 340, 635–639 (2013).
+11.	Naik, S. H. et al. Diverse and heritable lineage imprinting of early haematopoietic progenitors. Nature 496, 229–232 (2013).
+12.	Weinreb, C., Rodriguez-Fraticelli, A., Camargo, F. D. & Klein, A. M. Lineage tracing on transcriptional landscapes links state to fate during differentiation. Science 367, eaaw3381 (2020).
+13.	Milling, L. E. et al. Framework for in vivo T cell screens. J. Exp. Med. 221, e20230699 (2024).
+14.	Ding, J. W. et al. Dissecting gene regulatory networks governing human cortical cell fate. Nature 651, 732–742 (2026).
+15.	Milner, J. J. et al. Runx3 programs CD8+ T cell residency in non-lymphoid tissues and tumours. Nature 552, 253–257 (2017).
+16.	Crowl, J. T. et al. Tissue-resident memory CD8+ T cells possess unique transcriptional, epigenetic and functional adaptations to different tissue environments. Nat. Immunol. 23, 1121–1131 (2022).
+17.	Mackay, L. K. et al. The developmental pathway for CD103+CD8+ tissue-resident memory T cells of skin. Nat. Immunol. 14, 1294–1301 (2013).
+18.	Mackay, L. K. et al. Hobit and Blimp1 instruct a universal transcriptional program of tissue residency in lymphocytes. Science 352, 459–463 (2016).
+19.	Burn, T. N. et al. Antigen reactivity defines tissue-resident memory and exhausted T cells in tumors. Nat. Immunol. 27, 98–109 (2026).
+20.	Park, S. L. et al. Tissue-resident exhausted and memory CD8+ T cells have distinct ontogeny, function and roles in disease. Nat. Immunol. 27, 110–125 (2026).
+21.	Yao, C. et al. BACH2 enforces the transcriptional and epigenetic programs of stem-like CD8+ T cells. Nat. Immunol. 22, 370–380 (2021).
+22.	Shin, H. et al. A role for the transcriptional repressor Blimp-1 in CD8+ T cell exhaustion during chronic viral infection. Immunity 31, 309–320 (2009).
+23.	Sawant, D. V. et al. Adaptive plasticity of IL-10+ and IL-35+ Treg cells cooperatively promotes tumor T cell exhaustion. Nat. Immunol. 20, 724–735 (2019).
+24.	Schultz, D. C., Ayyanathan, K., Negorev, D., Maul, G. G. & Rauscher, F. J. SETDB1: a novel KAP-1-associated histone H3, lysine 9-specific methyltransferase that contributes to HP1-mediated silencing of euchromatic genes by KRAB zinc-finger proteins. Genes Dev. 16, 919–932 (2002).
+25.	Wei, K. et al. TRIM28 is an essential regulator of three-dimensional chromatin state underpinning CD8+ T cell activation. Nat. Commun. 16, 750 (2025).
+26.	Korsunsky, I. et al. Fast, sensitive and accurate integration of single-cell data with Harmony. Nat. Methods 16, 1289–1296 (2019).
+27.	Rowe, H. M. et al. KAP1 controls endogenous retroviruses in embryonic stem cells. Nature 463, 237–240 (2010).
+28.	Kato, M., Takemoto, K. & Shinkai, Y. A somatic role for the histone methyltransferase Setdb1 in endogenous retrovirus silencing. Nat. Commun. 9, 1683 (2018).
+29.	Mazet, J. M. et al. IFNγ signaling in cytotoxic T cells restricts anti-tumor responses by inhibiting the maintenance and diversity of intra-tumoral stem-like T cells. Nat. Commun. 14, 321 (2023).
+30.	Djenidi, F. et al. CD8+CD103+ Tumor–Infiltrating Lymphocytes Are Tumor-Specific Tissue-Resident Memory T Cells and a Prognostic Factor for Survival in Lung Cancer Patients. J. Immunol. 194, 3475–3486 (2015).
+31.	Ganesan, A.-P. et al. Tissue-resident memory features are linked to the magnitude of cytotoxic T cell responses in human lung cancer. Nat. Immunol. 18, 940–950 (2017).
+32.	Savas, P. et al. Single-cell profiling of breast cancer T cells reveals a tissue-resident memory subset associated with improved prognosis. Nat. Med. 24, 986–993 (2018).
+33.	Chikuma, S., Suita, N., Okazaki, I.-M., Shibayama, S. & Honjo, T. TRIM28 prevents autoinflammatory T cell development in vivo. Nat. Immunol. 13, 596–603 (2012).
+34.	Jiang, Y. et al. Epigenetic activation during T helper 17 cell differentiation is mediated by Tripartite motif containing 28. Nat. Commun. 9, 1424 (2018).
+35.	Gehrmann, U. et al. Critical role for TRIM28 and HP1β/γ in the epigenetic control of T cell metabolic reprograming and effector differentiation. Proc. Natl. Acad. Sci. 116, 25839–25849 (2019).
+36.	Adoue, V. et al. The Histone Methyltransferase SETDB1 Controls T Helper Cell Lineage Integrity by Repressing Endogenous Retroviruses. Immunity 50, 629-644.e8 (2019).
+37.	Utzschneider, D. T. et al. T Cell Factor 1-Expressing Memory-like CD8+ T Cells Sustain the Immune Response to Chronic Viral Infections. Immunity 45, 415–427 (2016).
+38.	Gattinoni, L. et al. Acquisition of full effector function in vitro paradoxically impairs the in vivo antitumor efficacy of adoptively transferred CD8+ T cells. J. Clin. Invest. 115, 1616–1626 (2005).
+39.	Klebanoff, C. A. et al. Central memory self/tumor-reactive CD8+ T cells confer superior antitumor immunity compared with effector memory T cells. Proc. Natl. Acad. Sci. 102, 9571–9576 (2005).
+40.	Pauken, K. E. et al. Epigenetic stability of exhausted T cells limits durability of reinvigoration by PD-1 blockade. Science 354, 1160–1165 (2016).
+41.	Fraietta, J. A. et al. Determinants of response and resistance to CD19 chimeric antigen receptor (CAR) T cell therapy of chronic lymphocytic leukemia. Nat. Med. 24, 563–571 (2018).
+42.	Long, A. H. et al. 4-1BB costimulation ameliorates T cell exhaustion induced by tonic signaling of chimeric antigen receptors. Nat. Med. 21, 581–590 (2015).
+43.	Philipp, N. et al. T-cell exhaustion induced by continuous bispecific molecule exposure is ameliorated by treatment-free intervals. Blood 140, 1104–1118 (2022).
+44.	Weber, E. W. et al. Transient rest restores functionality in exhausted CAR-T cells through epigenetic remodeling. Science 372, eaba1786 (2021).
+45.	Tomko, M., Sullivan, J. & Gopal, S. PoolQ Version 2.1.4 Manual. (Broad Institute Genetic Perturbation Platform, 2016).
+46.	Patro, R., Duggal, G., Love, M. I., Irizarry, R. A. & Kingsford, C. Salmon provides fast and bias-aware quantification of transcript expression. Nat. Methods 14, 417–419 (2017).
+47.	Frankish, A. et al. GENCODE reference annotation for the human and mouse genomes. Nucleic Acids Res. 47, D766–D773 (2019).
+48.	Love, M. I., Huber, W. & Anders, S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol. 15, 550 (2014).
+49.	10x Genomics. Cell Ranger. (10x Genomics, 2026).
+50.	Stoeckius, M. et al. Cell Hashing with barcoded antibodies enables multiplexing and doublet detection for single cell genomics. Genome Biol. 19, 224 (2018).
+51.	Stuart, T. et al. Comprehensive integration of single-cell data. Cell 177, 1888-1902.e21 (2019).
+52.	Wolf, F. A., Angerer, P. & Theis, F. J. SCANPY: large-scale single-cell gene expression data analysis. Genome Biol. 19, 15 (2018).
+53.	McInnes, L., Healy, J., Saul, N. & Grossberger, L. UMAP: Uniform Manifold Approximation and Projection. J. Open Source Softw. 3, 861 (2018).
+54.	Traag, V. A., Waltman, L. & Eck, N. J. van. From Louvain to Leiden: guaranteeing well-connected communities. Sci. Rep. 9, 5233 (2019).
+55.	Morgan, D. & Brock, A. Pycashier: cash in on DNA barcode tags. J. Open Source Softw. 9, 6891 (2024).
+56.	Dobin, A. et al. STAR: ultrafast universal RNA-seq aligner. Bioinformatics 29, 15–21 (2013).
+57.	Hall, J. & Galabova, I. HiGHS: High Performance Optimization Software. (University of Edinburgh, 2026).
+58.	Pritykin, Y. et al. A unified atlas of CD8 T cell dysfunctional states in cancer and infection. Mol. Cell 81, 2477-2493.e10 (2021).
+59.	10x Genomics. Cell Ranger ARC 2.0. (10x Genomics, 2026).
+60.	Zhang, Y. et al. Model-based analysis of ChIP-Seq (MACS). Genome Biol. 9, R137 (2008).
+61.	Smit, A. F. A., Hubley, R. & Green, P. RepeatMasker Open-4.0. (2015).
+62.	Haeussler, M. et al. The UCSC Genome Browser database: 2019 update. Nucleic Acids Res. 47, D853–D858 (2019).

@@ -1,0 +1,58 @@
+# Large or external data
+data/**/*.h5ad
+data/multiome/
+data/multiome
+data/comp_screen1/
+data/comp_screen1
+data/misc/
+data/misc
+data/signatures/
+data/signatures
+data/repeat_enrichment/
+data/repeat_enrichment
+raw_data/
+raw_data
+gcloud/
+gcloud
+Figure7_data_context_2026-05-19/
+Figure7_data_context_2026-05-19
+Figure1_data_handoff/
+Figure1_data_handoff
+data_submissions/
+data_submissions
+
+# Generated analysis outputs
+clonal_analysis/intermediate_files/
+clonal_analysis/intermediate_files
+manuscript/plots/
+manuscript/derived/
+manuscript/supplementary_tables/*.tsv
+manuscript/supplementary_tables/*.xlsx
+!manuscript/supplementary_tables/caption.txt
+results/
+intermediate_final_plots/
+workflow/.all_manuscript.done
+workflow/.all_reproducibility_archive.done
+
+# Workflow/runtime state
+.snakemake/
+workflow/.all_clonal_perturbseq.done
+logs/
+
+# Python/Jupyter
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Environments and local config
+.env
+.venv/
+env/
+venv/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
