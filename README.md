@@ -6,9 +6,6 @@ figures, public supplementary figures, supplementary tables, clonal modeling,
 and preprocessing notebooks for the 10-gene and Trim28/Setdb1 Perturb-seq
 datasets.
 
-Generated figures, tables, model grids, notebook execution copies, and large
-AnnData inputs are not tracked.
-
 ## Setup
 
 Create the analysis environment:
