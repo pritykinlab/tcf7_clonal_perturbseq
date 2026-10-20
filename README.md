@@ -33,6 +33,10 @@ For full-dataset analyses, plan for approximately 256 GB RAM; this is a
 recommended resource budget. Python 3.10 and the
 analysis dependencies are specified in [environment.yml](environment.yml).
 
+Estimated runtime for all analyses is approximately 24 hours on a system
+meeting the requirements above. Actual runtime depends on hardware and
+parallelization.
+
 ## Setup
 
 Create the analysis environment:
