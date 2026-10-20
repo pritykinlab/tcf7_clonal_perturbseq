@@ -27,10 +27,10 @@ reviewer access from the corresponding authors.
 
 ## System requirements
 
-The analyses were developed and run on the Argo2 Linux cluster. The current
-Argo2 host runs Springdale Open Enterprise Linux 8.8 (Modena), x86_64.
+The analyses were developed and run on the Linux cluster. The current
+host runs Springdale Open Enterprise Linux 8.8 (Modena), x86_64.
 For full-dataset analyses, plan for approximately 256 GB RAM; this is a
-recommended resource budget, not a measured minimum. Python 3.10 and the
+recommended resource budget. Python 3.10 and the
 analysis dependencies are specified in [environment.yml](environment.yml).
 
 ## Setup
