@@ -40,3 +40,7 @@ Place large processed inputs in the paths documented in `data/README.md`.
 
 Preprocessing notebooks are organized under `scripts/gene10_preprocessing/`
 and `scripts/trim28_setdb1_preprocessing/`.
+
+## License
+
+The software in this repository is released under the [MIT License](LICENSE).
